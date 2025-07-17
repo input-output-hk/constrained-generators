@@ -211,6 +211,7 @@ reify t f body =
     , Explain (pure ("reify " ++ show t ++ " somef $")) $ toPred (body x)
     ]
 
+-- | Like `reify` but provide a @[`var`| ... |]@-style name explicitly
 reifyWithName ::
   ( HasSpec a
   , HasSpec b
@@ -222,9 +223,9 @@ reifyWithName ::
   (Term b -> p) ->
   Pred
 reifyWithName nam t f body =
-  exists (\eval -> pure $ f (eval t)) $ \x ->
-    [ reifies (named nam x) t f
-    , Explain (pure ("reify " ++ show t ++ " somef $")) $ toPred (body (named nam x))
+  exists (\eval -> pure $ f (eval t)) $ \(name nam -> x) ->
+    [ reifies x t f
+    , Explain (pure ("reify " ++ show t ++ " somef $")) $ toPred (body x)
     ]
 
 -- | Like `suchThat` for constraints

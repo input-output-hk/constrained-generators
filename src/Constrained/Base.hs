@@ -72,7 +72,6 @@ module Constrained.Base (
   -- * Building `Pred`, `Specification`, `Term` etc.
   bind,
   name,
-  named,
 
   -- * TODO: documentme
   propagateSpec,
@@ -771,12 +770,6 @@ appTerm sym = curryList @ds (App @Deps @t @ds @r sym)
 name :: String -> Term a -> Term a
 name nh (V (Var i _)) = V (Var i nh)
 name _ _ = error "applying name to non-var thing! Shame on you!"
-
--- | Give a Term a nameHint, if its a Var, and doesn't already have one,
---  otherwise return the Term unchanged.
-named :: String -> Term a -> Term a
-named nh t@(V (Var i x)) = if x /= "v" then t else V (Var i nh)
-named _ t = t
 
 -- | Create a `Binder` with a fresh variable, used in e.g. `constrained`
 bind :: (HasSpec a, IsPred p) => (Term a -> p) -> Binder a

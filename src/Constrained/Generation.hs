@@ -51,7 +51,6 @@ module Constrained.Generation (
   pattern SumSpec,
 ) where
 
--- import Debug.Trace
 import Constrained.AbstractSyntax
 import Constrained.Base
 import Constrained.Conformance
@@ -98,40 +97,39 @@ import Prelude hiding (cycle, pred)
 -- generators are not flexible enough.
 genFromSpecT ::
   forall a m. (HasCallStack, HasSpec a, MonadGenError m) => Specification a -> GenT m a
-genFromSpecT (simplifySpec -> spec) =
-  case spec of
-    ExplainSpec [] s -> genFromSpecT s
-    ExplainSpec es s -> push es (genFromSpecT s)
-    MemberSpec as -> explain ("genFromSpecT on spec" ++ show spec) $ pureGen (elements (NE.toList as))
-    TrueSpec -> genFromSpecT (typeSpec $ emptySpec @a)
-    SuspendedSpec x p
-      -- NOTE: If `x` isn't free in `p` we still have to try to generate things
-      -- from `p` to make sure `p` is sat and then we can throw it away. A better
-      -- approach would be to only do this in the case where we don't know if `p`
-      -- is sat. The proper way to implement such a sat check is to remove
-      -- sat-but-unnecessary variables in the optimiser.
-      | not $ Name x `appearsIn` p -> do
-          !_ <- genFromPreds mempty p
-          genFromSpecT TrueSpec
-      | otherwise -> do
-          env <- genFromPreds mempty p
-          Env.find env x
-    TypeSpec s cant -> do
-      mode <- getMode
-      explainNE
-        ( NE.fromList
-            [ "genFromSpecT on (TypeSpec tspec cant) at type " ++ showType @a
-            , "tspec = "
-            , show s
-            , "cant = " ++ show (short cant)
-            , "with mode " ++ show mode
-            ]
-        )
-        $
-        -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
-        -- starts giving us trouble.
-        genFromTypeSpec s `suchThatT` (`notElem` cant)
-    ErrorSpec e -> genErrorNE e
+genFromSpecT (simplifySpec -> spec) = case spec of
+  ExplainSpec [] s -> genFromSpecT s
+  ExplainSpec es s -> push es (genFromSpecT s)
+  MemberSpec as -> explain ("genFromSpecT on spec" ++ show spec) $ pureGen (elements (NE.toList as))
+  TrueSpec -> genFromSpecT (typeSpec $ emptySpec @a)
+  SuspendedSpec x p
+    -- NOTE: If `x` isn't free in `p` we still have to try to generate things
+    -- from `p` to make sure `p` is sat and then we can throw it away. A better
+    -- approach would be to only do this in the case where we don't know if `p`
+    -- is sat. The proper way to implement such a sat check is to remove
+    -- sat-but-unnecessary variables in the optimiser.
+    | not $ Name x `appearsIn` p -> do
+        !_ <- genFromPreds mempty p
+        genFromSpecT TrueSpec
+    | otherwise -> do
+        env <- genFromPreds mempty p
+        Env.find env x
+  TypeSpec s cant -> do
+    mode <- getMode
+    explainNE
+      ( NE.fromList
+          [ "genFromSpecT on (TypeSpec tspec cant) at type " ++ showType @a
+          , "tspec = "
+          , show s
+          , "cant = " ++ show (short cant)
+          , "with mode " ++ show mode
+          ]
+      )
+      $
+      -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
+      -- starts giving us trouble.
+      genFromTypeSpec s `suchThatT` (`notElem` cant)
+  ErrorSpec e -> genErrorNE e
 
 -- | A version of `genFromSpecT` that simply errors if the generator fails
 genFromSpec :: forall a. (HasCallStack, HasSpec a) => Specification a -> Gen a

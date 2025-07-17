@@ -186,7 +186,6 @@ instance
         n <- genFromSpecT size'
         let go 0 _ m = pure m
             go n' kvs' m = do
-              -- mkv <- tryGenT $ genFromSpecT kvs'
               mkv <- inspect $ genFromSpecT kvs'
               case mkv of
                 Result (k, v) ->
