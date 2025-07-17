@@ -40,6 +40,7 @@ module Constrained.GenT (
 
   -- * So far undocumented
   fatalError,
+  getMessages,
   catMessages,
   catMessageList,
   explain,
