@@ -220,7 +220,10 @@ prepareLinearization p = do
     explainNE
       ( NE.fromList
           [ "Linearizing"
-          , show $ "  preds: " <> pretty preds
+          , show $
+              "  preds: "
+                <> pretty (take 3 preds)
+                <> (if length preds > 3 then fromString (" ... " ++ show (length preds - 3) ++ " more.") else "")
           , show $ "  graph: " <> pretty graph
           ]
       )
@@ -846,7 +849,7 @@ isEmptyPlan (SolverPlan plan _) = null plan
 
 stepPlan :: MonadGenError m => Env -> SolverPlan -> GenT m (Env, SolverPlan)
 stepPlan env plan@(SolverPlan [] _) = pure (env, plan)
-stepPlan env (SolverPlan (SolverStage x ps spec : pl) gr) = do
+stepPlan env (SolverPlan (SolverStage (x :: Var a) ps spec : pl) gr) = do
   (spec', specs) <- runGE
     $ explain
       ( show
@@ -864,6 +867,8 @@ stepPlan env (SolverPlan (SolverStage x ps spec : pl) gr) = do
           ( NE.fromList
               ( ( "\nStepPlan for variable: "
                     ++ show x
+                    ++ "::"
+                    ++ showType @a
                     ++ " fails to produce Specification, probably overconstrained."
                     ++ "PS = "
                     ++ unlines (map show ps)
@@ -896,8 +901,10 @@ genFromPreds env0 (optimisePred . optimisePred -> preds) =
     go :: Env -> SolverPlan -> GenT m Env
     go env plan | isEmptyPlan plan = pure env
     go env plan = do
+      (mess :: String) <- (unlines . map NE.head) <$> getMessages
       (env', plan') <-
-        explain (show $ "Stepping the plan:" /> vsep [pretty plan, pretty env]) $ stepPlan env plan
+        explain (show (fromString (mess ++ "Stepping the plan:") /> vsep [pretty plan, pretty env])) $
+          stepPlan env plan
       go env' plan'
 
 -- | Push as much information we can backwards through the plan.
@@ -1305,9 +1312,12 @@ data SolverStage where
     } ->
     SolverStage
 
+docVar :: Typeable a => Var a -> Doc h
+docVar (v :: Var a) = fromString (show v ++ " :: " ++ showType @a)
+
 instance Pretty SolverStage where
   pretty SolverStage {..} =
-    viaShow stageVar
+    docVar stageVar
       <+> "<-"
         /> vsep'
           ( [pretty stageSpec | not $ isTrueSpec stageSpec]

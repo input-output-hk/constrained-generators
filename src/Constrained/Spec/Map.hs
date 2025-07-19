@@ -186,26 +186,39 @@ instance
         n <- genFromSpecT size'
         let go 0 _ m = pure m
             go n' kvs' m = do
-              mkv <- tryGenT $ genFromSpecT kvs'
+              mkv <- inspect $ genFromSpecT kvs'
               case mkv of
-                Nothing
-                  | sizeOf m `conformsToSpec` size -> pure m
-                Just (k, v) ->
+                Result (k, v) ->
                   go
                     (n' - 1)
                     (kvs' <> typeSpec (Cartesian (notEqualSpec k) mempty))
                     (Map.insert k v m)
-                _ ->
+                GenError msgs ->
+                  if sizeOf m `conformsToSpec` size
+                    then pure m
+                    else
+                      genErrorNE
+                        (pure "Gen error while trying to generate enough elements for a Map." <> catMessageList msgs)
+                FatalError msgs ->
                   genErrorNE
                     ( NE.fromList
-                        [ "Failed to generate enough elements for the map:"
-                        , "  m = " ++ show m
-                        , "  n' = " ++ show n'
-                        , show $ "  kvs' = " <> pretty kvs'
-                        , show $ "  simplifySpec kvs' = " <> pretty (simplifySpec kvs')
+                        [ "Fatal error while trying to generate enough elements for a map:"
+                        , "  The ones we have generated so far = " ++ show m
+                        , "  The number we need to still generate: n' = " ++ show n'
+                        , "The original size spec " ++ show size
+                        , "The refined  size spec " ++ show size'
+                        , "The computed target size " ++ show n
+                        , "Fatal error messages"
+                        , "<<<---"
+                        -- , "The kvs Spec"
+                        -- , " >>>> "++ show $ "  kvs' = " <> pretty kvs'
+                        -- , "The simplified kvs Spec"
+                        -- , " >>>> "++ show(pretty (simplifySpec kvs'))
                         ]
+                        <> catMessageList msgs
+                        <> (pure "--->>>")
                     )
-        explain ("  n = " ++ show n) $ go n kvs mempty
+        explain ("  The number we are trying for: n = " ++ show n) $ go n kvs mempty
   genFromTypeSpec (MapSpec mHint mustKeys mustVals size (simplifySpec -> kvs) foldSpec) = do
     !mustMap <- explain "Make the mustMap" $ forM (Set.toList mustKeys) $ \k -> do
       let vSpec = constrained $ \v -> satisfies (pair_ (Lit k) v) kvs

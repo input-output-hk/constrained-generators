@@ -51,7 +51,6 @@ module Constrained.NumOrd (
 import Constrained.AbstractSyntax
 import Constrained.Base
 import Constrained.Conformance
-import Constrained.Conformance ()
 import Constrained.Core (Value (..), unionWithMaybe)
 import Constrained.FunctionSymbol
 import Constrained.GenT
