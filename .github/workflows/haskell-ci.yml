@@ -1,5 +1,9 @@
 name: Haskell-CI
 
+permissions:
+  contents: read
+  pull-requests: write
+
 on:
   push:
     branches:
@@ -16,30 +20,110 @@ concurrency:
 
 jobs:
   linux:
-    name: Haskell-CI - Linux - ${{ matrix.ghc-version }}
+    name: Haskell-CI - ${{ matrix.ghc-version }} - ${{ matrix.ref }}
 
     strategy:
       matrix:
-        ghc-version: [latest, 9.12, "9.10", 9.8, 9.6]
-        os: [ubuntu-24.04]
+        ghc-version: ["9.12", "9.10", "9.8", "9.6"]
+        ref: ["${{ github.head_ref }}"]
+        include:
+          - ghc-version: "9.12"
+            ref: master
       fail-fast: false
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+
       - uses: haskell-actions/setup@v2
         with:
           ghc-version: ${{matrix.ghc-version}}
-      - uses: actions/cache/restore@v4
+
+      - uses: actions/cache@v4
         with:
-          key: ${{ matrix.os }}-${{ matrix.ghc-version }}-${{ github.sha }}
-          path: ~/.cabal/store
-          restore-keys: ${{ matrix.os }}-${{ matrix.ghc-version }}-
+          key: ${{ matrix.ghc-version }}-${{ matrix.ref }}
+          path: |
+            ~/.cabal/store
+            dist-newstyle
+            .hpc
+          restore-keys: ${{ matrix.ghc-version }}-
+
+      - if: ${{ github.event.pull_request }}
+        run: |
+          cat <<EOF >>cabal.project.local
+          program-options
+            ghc-options: -fhpc
+          EOF
+
       - run: cabal build all
       - run: cabal test all
       - run: cabal haddock all
-      - uses: actions/cache/save@v4
+
+      # To get the right version of `generate-coverage-comment.sh`
+      - uses: actions/checkout@v4
         with:
-          key: ${{ matrix.os }}-${{ matrix.ghc-version }}-${{ github.sha }}
-          path: ~/.cabal/store
+          ref: ${{ github.head_ref }}
+          sparse-checkout:
+            scripts
+          clean: false
+
+      - if: ${{ github.event.pull_request }}
+        run: ./scripts/generate-coverage-comment.sh constrained.tix | tee coverage-report-${{matrix.ref}}.md
+
+      - name: Upload coverage report
+        if: ${{ github.event.pull_request }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: constrained-${{matrix.ref}}-${{matrix.ghc-version}}-coverage
+          path: coverage-report-${{matrix.ref}}.md
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  report:
+    name: Generate coverage comment
+
+    if: github.event.pull_request
+
+    needs: linux
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download coverage report
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'constrained-${{github.head_ref}}-9.12-coverage'
+          merge-multiple: true
+
+      - name: Download coverage report
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'constrained-master-9.12-coverage'
+          merge-multiple: true
+
+      - run: |
+          cat coverage-report-${{github.head_ref}}.md > coverage-report.md
+          echo "# On master" >> coverage-report.md
+          cat coverage-report-master.md >> coverage-report.md
+          cat coverage-report.md
+
+
+      - name: Find Comment
+        uses: peter-evans/find-comment@v3
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: "expressions used"
+
+      - name: Create or update comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: coverage-report.md
+          edit-mode: replace
