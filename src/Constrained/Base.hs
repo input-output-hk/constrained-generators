@@ -32,6 +32,7 @@ module Constrained.Base (
   pattern (:<:),
   pattern (:>:),
   pattern Unary,
+  Ctx,
   toCtx,
   flipCtx,
   fromListCtx,
@@ -88,6 +89,7 @@ module Constrained.Base (
   fromForAllSpec,
   Fun (..),
   BaseW (..),
+  Deps,
 ) where
 
 import Constrained.AbstractSyntax
