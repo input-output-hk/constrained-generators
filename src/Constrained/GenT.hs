@@ -358,6 +358,7 @@ scaleT sc (GenT gen) = GenT $ \mode msgs -> scale sc $ gen mode msgs
 getMode :: Applicative m => GenT m GenMode
 getMode = GenT $ \mode _ -> pure (pure mode)
 
+-- | Get the current stack of `explain` above you
 getMessages :: Applicative m => GenT m [NonEmpty String]
 getMessages = GenT $ \_ msgs -> pure (pure msgs)
 

@@ -24,6 +24,7 @@ module Constrained.Test (
   prop_propagateSpecSound,
   prop_gen_sound,
   specType,
+  TestableFn(..),
 ) where
 
 import Constrained.API.Extend
