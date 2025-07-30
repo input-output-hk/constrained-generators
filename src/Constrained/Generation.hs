@@ -228,7 +228,7 @@ prepareLinearization p = do
           ]
       )
       $ linearize preds graph
-  pure $ backPropagation $ SolverPlan plan graph
+  pure $ backPropagation $ SolverPlan plan
 
 -- | Flatten nested `Let`, `Exists`, and `And` in a `Pred fn`. `Let` and
 -- `Exists` bound variables become free in the result.
@@ -845,11 +845,11 @@ mergeSolverStage (SolverStage x ps spec) plan =
   ]
 
 isEmptyPlan :: SolverPlan -> Bool
-isEmptyPlan (SolverPlan plan _) = null plan
+isEmptyPlan (SolverPlan plan) = null plan
 
 stepPlan :: MonadGenError m => Env -> SolverPlan -> GenT m (Env, SolverPlan)
-stepPlan env plan@(SolverPlan [] _) = pure (env, plan)
-stepPlan env (SolverPlan (SolverStage (x :: Var a) ps spec : pl) gr) = do
+stepPlan env plan@(SolverPlan []) = pure (env, plan)
+stepPlan env (SolverPlan (SolverStage (x :: Var a) ps spec : pl)) = do
   (spec', specs) <- runGE
     $ explain
       ( show
@@ -884,14 +884,13 @@ stepPlan env (SolverPlan (SolverStage (x :: Var a) ps spec : pl) gr) = do
           (spec <> spec')
       )
   let env1 = Env.extend x val env
-  pure (env1, backPropagation $ SolverPlan (substStage env1 <$> pl) (deleteNode (Name x) gr))
+  pure (env1, backPropagation $ SolverPlan (substStage env1 <$> pl) )
 
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
 genFromPreds :: forall m. MonadGenError m => Env -> Pred -> GenT m Env
 -- TODO: remove this once optimisePred does a proper fixpoint computation
-genFromPreds env0 (optimisePred . optimisePred -> preds) =
-  {- explain1 (show $ "genFromPreds fails\nPreds are:" /> pretty preds) -} do
+genFromPreds env0 (optimisePred . optimisePred -> preds) = do
     -- NOTE: this is just lazy enough that the work of flattening,
     -- computing dependencies, and linearizing is memoized in
     -- properties that use `genFromPreds`.
@@ -909,8 +908,7 @@ genFromPreds env0 (optimisePred . optimisePred -> preds) =
 
 -- | Push as much information we can backwards through the plan.
 backPropagation :: SolverPlan -> SolverPlan
--- backPropagation (SolverPlan _plan _graph) =
-backPropagation (SolverPlan initplan graph) = SolverPlan (go [] (reverse initplan)) graph
+backPropagation (SolverPlan initplan) = SolverPlan (go [] (reverse initplan))
   where
     go :: [SolverStage] -> [SolverStage] -> [SolverStage]
     go acc [] = acc
@@ -1325,17 +1323,13 @@ instance Pretty SolverStage where
               ++ map pretty stagePreds
           )
 
-data SolverPlan = SolverPlan
-  { solverPlan :: [SolverStage]
-  , solverDependencies :: Graph Name
-  }
+newtype SolverPlan = SolverPlan { solverPlan :: [SolverStage] }
 
 instance Pretty SolverPlan where
   pretty SolverPlan {..} =
     "\nSolverPlan"
       /> vsep'
-        [ -- "\nDependencies:" /> pretty solverDependencies, -- Might be usefull someday
-          "\nLinearization:" /> prettyLinear solverPlan
+        [ "\nLinearization:" /> prettyLinear solverPlan
         ]
 
 isTrueSpec :: Specification a -> Bool
