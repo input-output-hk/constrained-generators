@@ -25,10 +25,13 @@ module Constrained.Generic (
   Sum (..),
   (:::),
   SOP,
+  SOPLike(..),
+  SOPOf,
+  ALG,
+  Inject(..),
   ProdOver,
   ConstrOf,
   inject,
-  algebra,
   SumOver,
 ) where
 
