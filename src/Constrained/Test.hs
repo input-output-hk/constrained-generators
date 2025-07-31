@@ -24,6 +24,7 @@ module Constrained.Test (
   prop_propagateSpecSound,
   prop_gen_sound,
   specType,
+  TestableFn(..),
 ) where
 
 import Constrained.API.Extend
@@ -47,6 +48,8 @@ import Data.Typeable (Typeable, typeOf)
 import Prettyprinter
 import Test.QuickCheck hiding (Fun)
 import qualified Test.QuickCheck as QC
+import Data.Word
+import Data.Int
 
 -- | Check that a generator from a given `Specification` is sound, it never
 -- generates a bad value that doesn't satisfy the constraint
@@ -324,6 +327,10 @@ instance (HasSpec a, Arbitrary (TypeSpec a)) => Arbitrary (Specification a) wher
       , (10, pure baseSpec)
       ]
 
+  shrink (TypeSpec ts cant) = flip TypeSpec cant <$> shrink ts
+  shrink (ExplainSpec _ s) = [s]
+  shrink _ = []
+
 instance
   ( Arbitrary a
   , Arbitrary (FoldSpec a)
@@ -389,6 +396,13 @@ instance QC.Arbitrary TestableFn where
       [ -- data IntW
         TestableFn $ AddW @Int
       , TestableFn $ NegateW @Int
+      , TestableFn $ MultW @Int
+      , TestableFn $ MultW @Integer
+      -- These are representative of the bounded types
+      , TestableFn $ MultW @Word8
+      , TestableFn $ MultW @Int8
+      , TestableFn $ MultW @Float
+      , TestableFn $ MultW @Double
       , TestableFn $ SizeOfW @(Map Int Int)
       , -- data BaseW
         TestableFn $ EqualW @Int

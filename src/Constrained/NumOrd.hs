@@ -28,6 +28,7 @@ module Constrained.NumOrd (
   (>=.),
   (<=.),
   (+.),
+  (*.),
   negate_,
   cardinality,
   caseBoolSpec,
@@ -201,6 +202,8 @@ deriving via Unbounded Integer instance MaybeBounded Integer
 deriving via Unbounded (Ratio Integer) instance MaybeBounded (Ratio Integer)
 
 deriving via Unbounded Float instance MaybeBounded Float
+
+deriving via Unbounded Double instance MaybeBounded Double
 
 instance MaybeBounded Natural where
   lowerBound = Just 0
@@ -651,7 +654,7 @@ cardinalNumSpec (NumSpecInterval Nothing Nothing) = cardinalTrueSpec @n
 -- Now the operations on Numbers
 
 -- | Everything we need to make the number operations make sense on a given type
-class (Num a, HasSpec a) => NumLike a where
+class (Num a, HasSpec a, HasDivision a) => NumLike a where
   subtractSpec :: a -> TypeSpec a -> Specification a
   default subtractSpec ::
     ( NumLike (SimpleRep a)
@@ -682,6 +685,7 @@ class (Num a, HasSpec a) => NumLike a where
 -- | Operations on numbers
 data IntW (as :: [Type]) b where
   AddW :: NumLike a => IntW '[a, a] a
+  MultW :: NumLike a => IntW '[a, a] a
   NegateW :: NumLike a => IntW '[a] a
 
 deriving instance Eq (IntW dom rng)
@@ -689,17 +693,124 @@ deriving instance Eq (IntW dom rng)
 instance Show (IntW d r) where
   show AddW = "+"
   show NegateW = "negate_"
+  show MultW = "*"
 
 instance Semantics IntW where
   semantics AddW = (+)
   semantics NegateW = negate
+  semantics MultW = (*)
 
 instance Syntax IntW where
   isInfix AddW = True
   isInfix NegateW = False
+  isInfix MultW = True
+
+class HasDivision a where
+  doDivide :: a -> a -> a
+  default doDivide ::
+    ( HasDivision (SimpleRep a)
+    , GenericRequires a
+    ) =>
+    a ->
+    a ->
+    a
+  doDivide a b = fromSimpleRep $ doDivide (toSimpleRep a) (toSimpleRep b)
+
+  divideSpec :: a -> TypeSpec a -> Specification a
+  default divideSpec ::
+    ( HasDivision (SimpleRep a)
+    , GenericRequires a
+    ) =>
+    a ->
+    TypeSpec a ->
+    Specification a
+  divideSpec a ts = fromSimpleRepSpec $ divideSpec (toSimpleRep a) ts
+
+instance {-# OVERLAPPABLE #-} (HasSpec a, MaybeBounded a, Integral a, TypeSpec a ~ NumSpec a) => HasDivision a where
+  doDivide = div
+
+  divideSpec 0 _ = TrueSpec
+  divideSpec a (NumSpecInterval (unionWithMaybe max lowerBound -> ml) (unionWithMaybe min upperBound -> mu)) = typeSpec ts
+    where
+      ts | a > 0 = NumSpecInterval ml' mu'
+         | otherwise = NumSpecInterval mu' ml'
+      ml' = adjustLowerBound <$> ml
+      mu' = adjustUpperBound <$> mu
+
+      -- NOTE: negate has different overflow semantics than div, so that's why we use negate below...
+
+      adjustLowerBound l
+        | a == 1 = l
+        | a == -1 = negate l
+        | otherwise =
+          let r = l `div` a in
+          if toInteger r * toInteger a < toInteger l
+          then r + signum a
+          else r
+
+      adjustUpperBound u
+        | a == 1  = u
+        | a == -1 = negate u
+        | otherwise =
+          let r = u `div` a in
+          if toInteger r * toInteger a > toInteger u
+          then r - signum a
+          else r
+
+instance HasDivision Float where
+  doDivide = (/)
+
+  divideSpec 0 _ = TrueSpec
+  divideSpec a (NumSpecInterval ml mu) = typeSpec ts
+    where
+      ts | a > 0 = NumSpecInterval ml' mu'
+         | otherwise = NumSpecInterval mu' ml'
+      ml' = adjustLowerBound <$> ml
+      mu' = adjustUpperBound <$> mu
+      adjustLowerBound l =
+        let r = l / a
+            l' = r * a
+        in
+        if l' < l
+        then r + (l - l') * 2 / a
+        else r
+
+      adjustUpperBound u =
+        let r = u / a
+            u' = r * a
+        in
+        if u < u'
+        then r - (u' - u) * 2 / a
+        else r
+
+instance HasDivision Double where
+  doDivide = (/)
+
+  divideSpec 0 _ = TrueSpec
+  divideSpec a (NumSpecInterval ml mu) = typeSpec ts
+    where
+      ts | a > 0 = NumSpecInterval ml' mu'
+         | otherwise = NumSpecInterval mu' ml'
+      ml' = adjustLowerBound <$> ml
+      mu' = adjustUpperBound <$> mu
+      adjustLowerBound l =
+        let r = l / a
+            l' = r * a
+        in
+        if l' < l
+        then r + (l - l') * 2 / a
+        else r
+
+      adjustUpperBound u =
+        let r = u / a
+            u' = r * a
+        in
+        if u < u'
+        then r - (u' - u) * 2 / a
+        else r
 
 -- | A type that we can reason numerically about in constraints
-type Numeric a = (HasSpec a, Ord a, Num a, TypeSpec a ~ NumSpec a, MaybeBounded a)
+type Numeric a = (HasSpec a, Ord a, Num a, TypeSpec a ~ NumSpec a, MaybeBounded a, HasDivision a)
 
 instance {-# OVERLAPPABLE #-} Numeric a => NumLike a where
   subtractSpec a ts@(NumSpecInterval ml mu)
@@ -728,6 +839,7 @@ instance {-# OVERLAPPABLE #-} Numeric a => NumLike a where
         | Just r <- safeSubtract a1 x = r
         | a1 < 0 = fromJust upperBound
         | otherwise = fromJust lowerBound
+
   negateSpec (NumSpecInterval ml mu) = typeSpec $ NumSpecInterval (negate <$> mu) (negate <$> ml)
 
   safeSubtract a x
@@ -742,12 +854,16 @@ instance {-# OVERLAPPABLE #-} Numeric a => NumLike a where
     | otherwise = Just $ x - a
 
 instance NumLike a => Num (Term a) where
-  (+) = addFn
-  negate = negateFn
+  (+) = (+.)
+  negate = negate_
   fromInteger = Lit . fromInteger
-  (*) = error "(*) not implemented for Term Fn Int"
+  (*) = (*.)
   abs = error "abs not implemented for Term Fn Int"
   signum = error "signum not implemented for Term Fn Int"
+
+invertMult :: (HasSpec a, Num a, HasDivision a) => a -> a -> Maybe a
+invertMult a b =
+  let r = a `doDivide` b in if r * b == a then Just r else Nothing
 
 -- | Just a note that these instances won't work until we are in a context where
 --   there is a HasSpec instance of 'a', which (NumLike a) demands.
@@ -756,6 +872,11 @@ instance Logic IntW where
   propagateTypeSpec AddW (HOLE :<: i) ts cant = subtractSpec i ts <> notMemberSpec (mapMaybe (safeSubtract i) cant)
   propagateTypeSpec AddW ctx ts cant = propagateTypeSpec AddW (flipCtx ctx) ts cant
   propagateTypeSpec NegateW (Unary HOLE) ts cant = negateSpec ts <> notMemberSpec (map negate cant)
+  propagateTypeSpec MultW (HOLE :<: 0) ts cant
+    | 0 `conformsToSpec` TypeSpec ts cant = TrueSpec
+    | otherwise = ErrorSpec $ NE.fromList [ "zero" ]
+  propagateTypeSpec MultW (HOLE :<: i) ts cant = divideSpec i ts <> notMemberSpec (mapMaybe (flip invertMult i) cant)
+  propagateTypeSpec MultW ctx ts cant = propagateTypeSpec MultW (flipCtx ctx) ts cant
 
   propagateMemberSpec AddW (HOLE :<: i) es =
     memberSpec
@@ -768,28 +889,36 @@ instance Logic IntW where
       )
   propagateMemberSpec AddW ctx es = propagateMemberSpec AddW (flipCtx ctx) es
   propagateMemberSpec NegateW (Unary HOLE) es = MemberSpec $ NE.nub $ fmap negate es
+  propagateMemberSpec MultW (HOLE :<: 0) es
+    | 0 `elem` es = TrueSpec
+    | otherwise = ErrorSpec $ NE.fromList [ "zero" ]
+  propagateMemberSpec MultW (HOLE :<: i) es = memberSpec (mapMaybe (flip invertMult i) (NE.toList es)) (NE.fromList ["propagateSpec"])
+  propagateMemberSpec MultW ctx es = propagateMemberSpec MultW (flipCtx ctx) es
 
-addFn :: forall a. NumLike a => Term a -> Term a -> Term a
-addFn = appTerm AddW
-
-negateFn :: forall a. NumLike a => Term a -> Term a
-negateFn = appTerm NegateW
+  rewriteRules AddW (x :> y :> Nil) _ | x == y = Just $ 2 * x
+  rewriteRules _ _ _ = Nothing
 
 infix 4 +.
 
 -- | `Term`-level `(+)`
 (+.) :: NumLike a => Term a -> Term a -> Term a
-(+.) = addFn
+(+.) = appTerm AddW
+
+infixl 7 *.
+
+-- | `Term`-level `(+)`
+(*.) :: NumLike a => Term a -> Term a -> Term a
+(*.) = appTerm MultW
 
 -- | `Term`-level `negate`
 negate_ :: NumLike a => Term a -> Term a
-negate_ = negateFn
+negate_ = appTerm NegateW
 
 infix 4 -.
 
 -- | `Term`-level `(-)`
 (-.) :: Numeric n => Term n -> Term n -> Term n
-(-.) x y = addFn x (negateFn y)
+(-.) x y = x +. negate_ y
 
 infixr 4 <=.
 
@@ -1021,6 +1150,17 @@ instance HasSpec Int64 where
 
 instance HasSpec Float where
   type TypeSpec Float = NumSpec Float
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+  cardinalTypeSpec _ = TrueSpec
+  guardTypeSpec = guardNumSpec
+
+instance HasSpec Double where
+  type TypeSpec Double = NumSpec Double
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec

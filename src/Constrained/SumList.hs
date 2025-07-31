@@ -166,10 +166,8 @@ genNumList ::
   ( MonadGenError m
   , Arbitrary a
   , Integral a
-  , MaybeBounded a
-  , TypeSpec a ~ NumSpec a
-  , -- , Foldy a
-    Random a
+  , Numeric a
+  , Random a
   , Complete a
   ) =>
   Specification a ->
@@ -470,12 +468,11 @@ narrowByFuelAndSize fuel size specpair =
 genListWithSize ::
   forall a m.
   ( Complete a
-  , TypeSpec a ~ NumSpec a
   , MonadGenError m
   , Random a
   , Integral a
   , Arbitrary a
-  , MaybeBounded a
+  , Numeric a
   , Complete Integer
   ) =>
   Specification Integer ->
