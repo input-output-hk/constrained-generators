@@ -35,6 +35,12 @@ evenSpec = explainSpec ["even via (x+x)"] $
       (\eval -> pure (div (eval evenx) 2))
       (\ [var|somey|] -> [assert $ evenx ==. somey + somey])
 
+composeEvenSpec :: Specification Int
+composeEvenSpec = constrained $ \ x -> [satisfies x evenSpec, assert $ x >. 10]
+
+composeOddSpec :: Specification Int
+composeOddSpec = constrained $ \ x -> [satisfies x oddSpec, assert $ x >. 10]
+
 sum3WithLength :: Integer -> Specification ([Int], Int, Int, Int)
 sum3WithLength n =
   constrained $ \ [var|quad|] ->

@@ -20,9 +20,11 @@ import Constrained.Examples.Either
 import Constrained.Examples.Fold (
   Outcome (..),
   evenSpec,
+  composeEvenSpec,
   listSumComplex,
   logishProp,
   oddSpec,
+  composeOddSpec,
   pickProp,
   sum3,
   sum3WithLength,
@@ -203,6 +205,10 @@ tests nightly =
     prop "prop_noNarrowLoop" $ withMaxSuccess 1000 prop_noNarrowLoop
     conformsToSpecESpec
     foldWithSizeTests
+    testSpec "evenSpec" (evenSpec @Int)
+    testSpec "composeEvenSpec" composeEvenSpec
+    testSpec "oddSpec" oddSpec
+    testSpec "composeOddSpec" composeOddSpec
 
 negativeTests :: Spec
 negativeTests =
