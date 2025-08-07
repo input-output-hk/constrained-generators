@@ -203,7 +203,7 @@ instance
                   genErrorNE
                     ( NE.fromList
                         [ "Fatal error while trying to generate enough elements for a map:"
-                        , "  The ones we have generated so far = " ++ show m
+                        , "  The "++show (Map.size m)++"pairs we have generated so far = " ++ show m
                         , "  The number we need to still generate: n' = " ++ show n'
                         , "The original size spec " ++ show size
                         , "The refined  size spec " ++ show size'
@@ -212,8 +212,8 @@ instance
                         , "<<<---"
                         -- , "The kvs Spec"
                         -- , " >>>> "++ show $ "  kvs' = " <> pretty kvs'
-                        -- , "The simplified kvs Spec"
-                        -- , " >>>> "++ show(pretty (simplifySpec kvs'))
+                        , "The simplified kvs Spec"
+                        , " >>>> "++ show(pretty (simplifySpec kvs'))
                         ]
                         <> catMessageList msgs
                         <> (pure "--->>>")
