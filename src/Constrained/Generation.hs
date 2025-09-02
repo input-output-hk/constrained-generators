@@ -939,12 +939,14 @@ backPropagation relevant (SolverPlan initplan) = SolverPlan (go [] (reverse init
         termVarEqCases :: HasSpec b => Specification a -> Var b -> Term b -> [SolverStage]
         termVarEqCases (MemberSpec vs) x' t
           | Set.singleton (Name x) == freeVarSet t =
-              [SolverStage x' [] (MemberSpec (NE.nub (fmap (\v -> errorGE $ runTerm (Env.singleton x v) t) vs))) relevant]
+              [SolverStage x' [] (MemberSpec (NE.nub (fmap (\v -> errorGE $ runTerm (Env.singleton x v) t) vs)))
+               (Set.insert (Name x') relevant)]
         termVarEqCases specx x' t
           | Just Refl <- eqVar x x'
           , [Name y] <- Set.toList $ freeVarSet t
           , Result ctx <- toCtx y t =
-              [SolverStage y [] (propagateSpec specx ctx) relevant]
+              [SolverStage y [] (propagateSpec specx ctx)
+               (Set.insert (Name x') relevant)]
         termVarEqCases _ _ _ = []
 
 -- | Function symbols for `(==.)`
@@ -1342,10 +1344,7 @@ newtype SolverPlan = SolverPlan { solverPlan :: [SolverStage] }
 
 instance Pretty SolverPlan where
   pretty SolverPlan {..} =
-    "\nSolverPlan"
-      /> vsep'
-        [ "\nLinearization:" /> prettyLinear solverPlan
-        ]
+    "SolverPlan" /> prettyLinear solverPlan
 
 isTrueSpec :: Specification a -> Bool
 isTrueSpec TrueSpec = True
