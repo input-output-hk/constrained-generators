@@ -861,8 +861,9 @@ stepPlan (SolverPlan origStages) env (SolverPlan (stage@(SolverStage (x :: Var a
                              , "Current stage: " /> pretty stage
                              ]
       -- TODO: tests for this, including tests for transitive behaviour
-      narrowedOrigPlan = SolverPlan $ [ st | st@(SolverStage v _ _ _) <- origStages, Name v `Set.member` relevant ]
-      narrowedEnv = Env.filterKeys env (\v -> nameOf v `Set.member` (Set.map (\ (Name n) -> nameOf n) relevant))
+      relevant' = Set.insert (Name x) relevant
+      narrowedOrigPlan = SolverPlan $ [ st | st@(SolverStage v _ _ _) <- origStages, Name v `Set.member` relevant' ]
+      narrowedEnv = Env.filterKeys env (\v -> nameOf v `Set.member` (Set.map (\ (Name n) -> nameOf n) relevant'))
   explain (show errorMessage) $ do
     (spec', specs) <- runGE
       $ explain
@@ -899,7 +900,6 @@ stepPlan (SolverPlan origStages) env (SolverPlan (stage@(SolverStage (x :: Var a
             (spec <> spec')
         )
     let env1 = Env.extend x val env
-    let relevant' = Set.insert (Name x) relevant
     pure (env1, backPropagation relevant' $ SolverPlan (substStage relevant' x val <$> pl) )
 
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
