@@ -194,11 +194,15 @@ prettyPlan (simplifySpec -> spec)
 
 -- ---------------------- Building a plan -----------------------------------
 
-substStage :: Env -> SolverStage -> SolverStage
-substStage env (SolverStage y ps spec) = normalizeSolverStage $ SolverStage y (substPred env <$> ps) spec
+substStage :: HasSpec a => Set Name -> Var a -> a -> SolverStage -> SolverStage
+substStage rel' x val (SolverStage y ps spec relevant) =
+  normalizeSolverStage $ SolverStage y (substPred env <$> ps) spec relevant'
+  where env = Env.singleton x val
+        relevant' | Name x `appearsIn` ps = rel' <> relevant
+                  | otherwise = relevant
 
 normalizeSolverStage :: SolverStage -> SolverStage
-normalizeSolverStage (SolverStage x ps spec) = SolverStage x ps'' (spec <> spec')
+normalizeSolverStage (SolverStage x ps spec relevant) = SolverStage x ps'' (spec <> spec') relevant
   where
     (ps', ps'') = partition ((1 ==) . Set.size . freeVarSet) ps
     spec' = fromGESpec $ computeSpec x (And ps')
@@ -228,7 +232,7 @@ prepareLinearization p = do
           ]
       )
       $ linearize preds graph
-  pure $ backPropagation $ SolverPlan plan
+  pure $ backPropagation mempty $ SolverPlan plan
 
 -- | Flatten nested `Let`, `Exists`, and `And` in a `Pred fn`. `Let` and
 -- `Exists` bound variables become free in the result.
@@ -300,7 +304,7 @@ linearize preds graph = do
               ]
     go (n@(Name x) : ns) ps = do
       let (nps, ops) = partition (isLastVariable n . fst) ps
-      (normalizeSolverStage (SolverStage x (map snd nps) mempty) :) <$> go ns ops
+      (normalizeSolverStage (SolverStage x (map snd nps) mempty mempty):) <$> go ns ops
 
     isLastVariable n set = n `Set.member` set && solvableFrom n (Set.delete n set) graph
 
@@ -823,7 +827,7 @@ totalWeight = fmap getSum . foldMapList (fmap Semigroup.Sum . weight)
 
 -- | Does nothing if the variable is not in the plan already.
 mergeSolverStage :: SolverStage -> [SolverStage] -> [SolverStage]
-mergeSolverStage (SolverStage x ps spec) plan =
+mergeSolverStage (SolverStage x ps spec relevant) plan =
   [ case eqVar x y of
       Just Refl ->
         SolverStage
@@ -840,51 +844,63 @@ mergeSolverStage (SolverStage x ps spec) plan =
               )
               (spec <> spec')
           )
+          (relevant <> relevant')
       Nothing -> stage
-  | stage@(SolverStage y ps' spec') <- plan
+  | stage@(SolverStage y ps' spec' relevant') <- plan
   ]
 
 isEmptyPlan :: SolverPlan -> Bool
 isEmptyPlan (SolverPlan plan) = null plan
 
-stepPlan :: MonadGenError m => Env -> SolverPlan -> GenT m (Env, SolverPlan)
-stepPlan env plan@(SolverPlan []) = pure (env, plan)
-stepPlan env (SolverPlan (SolverStage (x :: Var a) ps spec : pl)) = do
-  (spec', specs) <- runGE
-    $ explain
-      ( show
-          ( "Computing specs for variable "
-              <> pretty x
-                /> vsep' (map pretty ps)
-          )
-      )
-    $ do
-      ispecs <- mapM (computeSpec x) ps
-      pure $ (fold ispecs, ispecs)
-  val <-
-    genFromSpecT
-      ( addToErrorSpec
-          ( NE.fromList
-              ( ( "\nStepPlan for variable: "
-                    ++ show x
-                    ++ "::"
-                    ++ showType @a
-                    ++ " fails to produce Specification, probably overconstrained."
-                    ++ "PS = "
-                    ++ unlines (map show ps)
+stepPlan :: MonadGenError m => SolverPlan -> Env -> SolverPlan -> GenT m (Env, SolverPlan)
+stepPlan _ env plan@(SolverPlan []) = pure (env, plan)
+stepPlan (SolverPlan origStages) env (SolverPlan (stage@(SolverStage (x :: Var a) ps spec relevant) : pl)) = do
+  let errorMessage = "Failed to step the plan" />
+                        vsep [ "Relevant parts of original plan: " /> pretty narrowedOrigPlan
+                             , "Relevant parts of the env: " /> pretty narrowedEnv
+                             , "Current stage: " /> pretty stage
+                             ]
+      -- TODO: tests for this, including tests for transitive behaviour
+      narrowedOrigPlan = SolverPlan $ [ st | st@(SolverStage v _ _ _) <- origStages, Name v `Set.member` relevant ]
+      narrowedEnv = Env.filterKeys env (\v -> nameOf v `Set.member` (Set.map (\ (Name n) -> nameOf n) relevant))
+  explain (show errorMessage) $ do
+    (spec', specs) <- runGE
+      $ explain
+        ( show
+            ( "Computing specs for variable "
+                <> pretty x
+                  /> vsep' (map pretty ps)
+            )
+        )
+      $ do
+        ispecs <- mapM (computeSpec x) ps
+        pure $ (fold ispecs, ispecs)
+    val <-
+      genFromSpecT
+        ( addToErrorSpec
+            ( NE.fromList
+                ( ( "\nStepPlan for variable: "
+                      ++ show x
+                      ++ "::"
+                      ++ showType @a
+                      ++ " fails to produce Specification, probably overconstrained."
+                      ++ "PS = "
+                      ++ unlines (map show ps)
+                  )
+                    : ("Relevant variables " ++ show relevant)
+                    : ("Original spec " ++ show spec)
+                    : "Predicates"
+                    : zipWith
+                      (\pred specx -> "  pred " ++ show pred ++ " -> " ++ show specx)
+                      ps
+                      specs
                 )
-                  : ("Original spec " ++ show spec)
-                  : "Predicates"
-                  : zipWith
-                    (\pred specx -> "  pred " ++ show pred ++ " -> " ++ show specx)
-                    ps
-                    specs
-              )
-          )
-          (spec <> spec')
-      )
-  let env1 = Env.extend x val env
-  pure (env1, backPropagation $ SolverPlan (substStage env1 <$> pl) )
+            )
+            (spec <> spec')
+        )
+    let env1 = Env.extend x val env
+    let relevant' = Set.insert (Name x) relevant
+    pure (env1, backPropagation relevant' $ SolverPlan (substStage relevant' x val <$> pl) )
 
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
@@ -894,25 +910,22 @@ genFromPreds env0 (optimisePred . optimisePred -> preds) = do
     -- NOTE: this is just lazy enough that the work of flattening,
     -- computing dependencies, and linearizing is memoized in
     -- properties that use `genFromPreds`.
-    plan <- runGE $ prepareLinearization preds
-    go env0 plan
+    origPlan <- runGE $ prepareLinearization preds
+    let go :: Env -> SolverPlan -> GenT m Env
+        go env plan | isEmptyPlan plan = pure env
+        go env plan = do
+          (env', plan') <- stepPlan origPlan env plan
+          go env' plan'
+    go env0 origPlan
   where
-    go :: Env -> SolverPlan -> GenT m Env
-    go env plan | isEmptyPlan plan = pure env
-    go env plan = do
-      (mess :: String) <- (unlines . map NE.head) <$> getMessages
-      (env', plan') <-
-        explain (show (fromString (mess ++ "Stepping the plan:") /> vsep [pretty plan, pretty env])) $
-          stepPlan env plan
-      go env' plan'
 
 -- | Push as much information we can backwards through the plan.
-backPropagation :: SolverPlan -> SolverPlan
-backPropagation (SolverPlan initplan) = SolverPlan (go [] (reverse initplan))
+backPropagation :: Set Name -> SolverPlan -> SolverPlan
+backPropagation relevant (SolverPlan initplan) = SolverPlan (go [] (reverse initplan))
   where
     go :: [SolverStage] -> [SolverStage] -> [SolverStage]
     go acc [] = acc
-    go acc (s@(SolverStage (x :: Var a) ps spec) : plan) = go (s : acc) plan'
+    go acc (s@(SolverStage (x :: Var a) ps spec _) : plan) = go (s : acc) plan'
       where
         newStages = concatMap (newStage spec) ps
         plan' = foldr mergeSolverStage plan newStages
@@ -926,12 +939,12 @@ backPropagation (SolverPlan initplan) = SolverPlan (go [] (reverse initplan))
         termVarEqCases :: HasSpec b => Specification a -> Var b -> Term b -> [SolverStage]
         termVarEqCases (MemberSpec vs) x' t
           | Set.singleton (Name x) == freeVarSet t =
-              [SolverStage x' [] $ MemberSpec (NE.nub (fmap (\v -> errorGE $ runTerm (Env.singleton x v) t) vs))]
+              [SolverStage x' [] (MemberSpec (NE.nub (fmap (\v -> errorGE $ runTerm (Env.singleton x v) t) vs))) relevant]
         termVarEqCases specx x' t
           | Just Refl <- eqVar x x'
           , [Name y] <- Set.toList $ freeVarSet t
           , Result ctx <- toCtx y t =
-              [SolverStage y [] (propagateSpec specx ctx)]
+              [SolverStage y [] (propagateSpec specx ctx) relevant]
         termVarEqCases _ _ _ = []
 
 -- | Function symbols for `(==.)`
@@ -1025,10 +1038,11 @@ pinnedBy _ _ = Nothing
 --      assert $ just_ x ==. lookup_ y (lit $ Map.fromList [(z, z) | z <- [100 .. 102]])
 
 -- Without this code the example wouldn't work because `y` is completely unconstrained during
--- generation. With this code we essentially rewrite occurences of `just_ A == B` to
--- `[cJust A == B, case B of Nothing -> False; Just _ -> True]` to add extra information
+-- generation. With this code we _essentially_ rewrite occurences of `just_ A == B` to
+-- `[just_ A == B, case B of Nothing -> False; Just _ -> True]` to add extra information
 -- about the variables in `B`. Consequently, `y` in the example above is
--- constrained to `MemberSpec [100 .. 102]` in the plan.
+-- constrained to `MemberSpec [100 .. 102]` in the plan. This is implemented using the `saturate`
+-- function in the logic type class - in the example above for `==`.
 saturatePred :: Pred -> [Pred]
 saturatePred p =
   -- [p]
@@ -1307,6 +1321,7 @@ data SolverStage where
     { stageVar :: Var a
     , stagePreds :: [Pred]
     , stageSpec :: Specification a
+    , relevantVariables :: Set Name
     } ->
     SolverStage
 
