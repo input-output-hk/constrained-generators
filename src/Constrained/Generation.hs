@@ -1309,6 +1309,7 @@ instance Pretty SolverStage where
           ( [pretty stageSpec | not $ isTrueSpec stageSpec]
               ++ ["---" | not $ null stagePreds, not $ isTrueSpec stageSpec]
               ++ map pretty stagePreds
+              ++ ["_" | null stagePreds && isTrueSpec stageSpec]
           )
 
 newtype SolverPlan = SolverPlan { solverPlan :: [SolverStage] }

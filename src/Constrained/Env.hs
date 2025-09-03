@@ -20,7 +20,6 @@ module Constrained.Env (
 
 import Constrained.Core
 import Constrained.GenT
-import Constrained.PrettyUtils
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Typeable
@@ -80,12 +79,12 @@ filterKeys :: Env -> (forall a. Typeable a => Var a -> Bool) -> Env
 filterKeys (Env m) f = Env $ Map.filterWithKey (\ (EnvKey k) _ -> f k) m
 
 instance Pretty EnvValue where
-  pretty (EnvValue x) = pretty $ take 80 (show x)
+  pretty (EnvValue x) = viaShow x
 
 instance Pretty EnvKey where
   pretty (EnvKey x) = viaShow x
 
 instance Pretty Env where
-  pretty (Env m) = "Env" /> vsep (map f (Map.toList m))
+  pretty (Env m) = vsep (map f (Map.toList m))
     where
       f (k, v) = hsep [pretty k, "->", pretty v]
