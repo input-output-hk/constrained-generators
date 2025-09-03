@@ -23,8 +23,8 @@ module Constrained.PrettyUtils (
   prettyType,
   vsep',
   (/>),
+  (//>),
   showType,
-  short,
 ) where
 
 import Constrained.List
@@ -73,26 +73,13 @@ h /> cont = hang 2 $ sep [h, align cont]
 
 infixl 5 />
 
+-- | Lay the header (first argument) out above the body
+-- and and indent the body by 2
+(//>) :: Doc ann -> Doc ann -> Doc ann
+h //> cont = hang 2 $ vsep [h, align cont]
+
+infixl 5 //>
+
 -- | Show a `Typeable` thing's type
 showType :: forall t. Typeable t => String
 showType = show (typeRep (Proxy @t))
-
--- | Set to True if you need to see everything while debugging
-verboseShort :: Bool
-verboseShort = True
-
--- | Pretty-print a short list in full and truncate longer lists
-short :: forall a x. (Show a, Typeable a) => [a] -> Doc x
-short [] = "[]"
-short [x] =
-  let raw = show x
-      refined = if length raw <= 20 || verboseShort then raw else take 20 raw ++ " ... "
-   in "[" <+> fromString refined <+> "]"
-short xs =
-  if verboseShort
-    then fromString $ unlines (map show xs)
-    else
-      let raw = show xs
-       in if length raw <= 50
-            then fromString raw
-            else "([" <+> viaShow (length xs) <+> "elements ...] @" <> prettyType @a <> ")"

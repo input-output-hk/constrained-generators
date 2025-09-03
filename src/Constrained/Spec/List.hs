@@ -358,8 +358,8 @@ instance Semantics ListW where
   semantics AppendW = (++)
 
 instance Syntax ListW where
-  prettySymbol AppendW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "append_" <+> short n <+> prettyPrec 10 y
-  prettySymbol AppendW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "append_" <+> prettyPrec 10 y <+> short n
+  prettySymbol AppendW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "append_" <+> viaShow n <+> prettyPrec 10 y
+  prettySymbol AppendW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "append_" <+> prettyPrec 10 y <+> viaShow n
   prettySymbol _ _ _ = Nothing
 
 instance Show (ListW d r) where

@@ -20,6 +20,7 @@ module Constrained.Env (
 
 import Constrained.Core
 import Constrained.GenT
+import Constrained.PrettyUtils
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Typeable
@@ -85,6 +86,6 @@ instance Pretty EnvKey where
   pretty (EnvKey x) = viaShow x
 
 instance Pretty Env where
-  pretty (Env m) = vsep ("Env" : (map f (Map.toList m)))
+  pretty (Env m) = "Env" /> vsep (map f (Map.toList m))
     where
       f (k, v) = hsep [pretty k, "->", pretty v]

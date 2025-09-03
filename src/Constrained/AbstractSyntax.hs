@@ -377,7 +377,7 @@ instance (Show a, Typeable a, Show (TypeSpecD deps a)) => Pretty (WithPrec (Spec
     ExplainSpec es z -> "ExplainSpec" <+> viaShow es <+> "$" /> pretty z
     ErrorSpec es -> "ErrorSpec" /> vsep' (map fromString (NE.toList es))
     TrueSpec -> fromString $ "TrueSpec @(" ++ showType @a ++ ")"
-    MemberSpec xs -> "MemberSpec" <+> short (NE.toList xs)
+    MemberSpec xs -> "MemberSpec" <+> viaShow (NE.toList xs)
     SuspendedSpec x p -> parensIf (d > 10) $ "constrained $ \\" <+> viaShow x <+> "->" /> pretty p
     -- TODO: require pretty for `TypeSpec` to make this much nicer
     TypeSpecD ts cant ->

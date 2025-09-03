@@ -121,7 +121,7 @@ genFromSpecT (simplifySpec -> spec) = case spec of
           [ "genFromSpecT on (TypeSpec tspec cant) at type " ++ showType @a
           , "tspec = "
           , show s
-          , "cant = " ++ show (short cant)
+          , "cant = " ++ show cant
           , "with mode " ++ show mode
           ]
       )
@@ -830,21 +830,21 @@ mergeSolverStage :: SolverStage -> [SolverStage] -> [SolverStage]
 mergeSolverStage (SolverStage x ps spec relevant) plan =
   [ case eqVar x y of
       Just Refl ->
-        SolverStage
-          y
-          (ps ++ ps')
-          ( addToErrorSpec
-              ( NE.fromList
-                  ( [ "Solving var " ++ show x ++ " fails."
-                    , "Merging the Specs"
-                    , "   1. " ++ show spec
-                    , "   2. " ++ show spec'
-                    ]
-                  )
-              )
-              (spec <> spec')
-          )
-          (relevant <> relevant')
+        normalizeSolverStage $ SolverStage
+            y
+            (ps ++ ps')
+            ( addToErrorSpec
+                ( NE.fromList
+                    ( [ "Solving var " ++ show x ++ " fails."
+                      , "Merging the Specs"
+                      , "   1. " ++ show spec
+                      , "   2. " ++ show spec'
+                      ]
+                    )
+                )
+                (spec <> spec')
+            )
+            (relevant <> relevant')
       Nothing -> stage
   | stage@(SolverStage y ps' spec' relevant') <- plan
   ]
@@ -856,49 +856,20 @@ stepPlan :: MonadGenError m => SolverPlan -> Env -> SolverPlan -> GenT m (Env, S
 stepPlan _ env plan@(SolverPlan []) = pure (env, plan)
 stepPlan (SolverPlan origStages) env (SolverPlan (stage@(SolverStage (x :: Var a) ps spec relevant) : pl)) = do
   let errorMessage = "Failed to step the plan" />
-                        vsep [ "Relevant parts of original plan: " /> pretty narrowedOrigPlan
-                             , "Relevant parts of the env: " /> pretty narrowedEnv
-                             , "Current stage: " /> pretty stage
+                        vsep [ "Relevant parts of original plan:" //> pretty narrowedOrigPlan
+                             , "Relevant parts of the env:" //> pretty narrowedEnv
+                             , "Current stage:" //> pretty stage
                              ]
       -- TODO: tests for this, including tests for transitive behaviour
       relevant' = Set.insert (Name x) relevant
       narrowedOrigPlan = SolverPlan $ [ st | st@(SolverStage v _ _ _) <- origStages, Name v `Set.member` relevant' ]
       narrowedEnv = Env.filterKeys env (\v -> nameOf v `Set.member` (Set.map (\ (Name n) -> nameOf n) relevant'))
   explain (show errorMessage) $ do
-    (spec', specs) <- runGE
-      $ explain
-        ( show
-            ( "Computing specs for variable "
-                <> pretty x
-                  /> vsep' (map pretty ps)
-            )
-        )
-      $ do
-        ispecs <- mapM (computeSpec x) ps
-        pure $ (fold ispecs, ispecs)
-    val <-
-      genFromSpecT
-        ( addToErrorSpec
-            ( NE.fromList
-                ( ( "\nStepPlan for variable: "
-                      ++ show x
-                      ++ "::"
-                      ++ showType @a
-                      ++ " fails to produce Specification, probably overconstrained."
-                      ++ "PS = "
-                      ++ unlines (map show ps)
-                  )
-                    : ("Relevant variables " ++ show relevant)
-                    : ("Original spec " ++ show spec)
-                    : "Predicates"
-                    : zipWith
-                      (\pred specx -> "  pred " ++ show pred ++ " -> " ++ show specx)
-                      ps
-                      specs
-                )
-            )
-            (spec <> spec')
-        )
+    when (isErrorLike spec) $
+      genError "The specification in the current stage is unsatisfiable, giving up."
+    when (not $ null ps) $
+      fatalError "Something went wrong and not all predicates have been discharged. Report this as a bug in Constrained.Generation"
+    val <- genFromSpecT spec
     let env1 = Env.extend x val env
     pure (env1, backPropagation relevant' $ SolverPlan (substStage relevant' x val <$> pl) )
 
