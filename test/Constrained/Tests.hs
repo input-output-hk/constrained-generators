@@ -85,6 +85,7 @@ tests nightly =
     testSpec "mapElemKeySpec" mapElemKeySpec
     -- TODO: double shrinking
     testSpecNoShrink "mapIsJust" mapIsJust
+    testSpecNoShrink "eitherKeys" eitherKeys
     testSpecNoShrink "intSpec" intSpec
     testSpecNoShrink "mapPairSpec" mapPairSpec
     testSpecNoShrink "mapEmptyDomainSpec" mapEmptyDomainSpec
