@@ -134,6 +134,7 @@ fastInequality _ _ = True
 class Syntax (t :: [Type] -> Type -> Type) where
   isInfix :: t dom rng -> Bool
   isInfix _ = False
+
   prettySymbol ::
     forall deps dom rng ann.
     t dom rng ->

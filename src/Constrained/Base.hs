@@ -671,8 +671,6 @@ instance Show (BaseW d r) where
   show FromGenericW = "fromSimpleRep"
 
 instance Syntax BaseW where
-  prettySymbol ToGenericW (x :> Nil) p = Just $ "to" <+> pretty (WithPrec p x)
-  prettySymbol FromGenericW (x :> Nil) p = Just $ "from" <+> pretty (WithPrec p x)
 
 instance Semantics BaseW where
   semantics FromGenericW = fromSimpleRep
