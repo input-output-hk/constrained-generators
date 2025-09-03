@@ -860,7 +860,6 @@ stepPlan (SolverPlan origStages) env (SolverPlan (stage@(SolverStage (x :: Var a
                              , "Already generated variables:" //> pretty narrowedEnv
                              , "Current stage:" //> pretty stage
                              ]
-      -- TODO: tests for this, including tests for transitive behaviour
       relevant' = Set.insert (Name x) relevant
       narrowedOrigPlan = SolverPlan $ [ st | st@(SolverStage v _ _ _) <- origStages, Name v `Set.member` relevant' ]
       narrowedEnv = Env.filterKeys env (\v -> nameOf v `Set.member` (Set.map (\ (Name n) -> nameOf n) relevant'))
