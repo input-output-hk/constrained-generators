@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -15,9 +16,11 @@ module Constrained.PrettyUtils (
   parensIf,
   prettyPrec,
 
-  -- * Lists
+  -- * Lists and sets
   ppList,
   ppListC,
+  prettyShowSet,
+  prettyShowList,
 
   -- * General helpers
   prettyType,
@@ -28,6 +31,8 @@ module Constrained.PrettyUtils (
 ) where
 
 import Constrained.List
+import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.String (fromString)
 import Data.Typeable
 import Prettyprinter
@@ -57,6 +62,12 @@ ppListC ::
   forall c f as ann. All c as => (forall a. c a => f a -> Doc ann) -> List f as -> [Doc ann]
 ppListC _ Nil = []
 ppListC pp (a :> as) = pp a : ppListC @c pp as
+
+prettyShowSet :: Show a => Set a -> Doc ann
+prettyShowSet xs = fillSep $ "{" : punctuate "," (map viaShow (Set.toList xs)) ++ ["}"]
+
+prettyShowList :: Show a => [a] -> Doc ann
+prettyShowList xs = fillSep $ "[" : punctuate "," (map viaShow xs) ++ ["]"]
 
 -- | Pretty-print a type
 prettyType :: forall t x. Typeable t => Doc x

@@ -856,8 +856,8 @@ stepPlan :: MonadGenError m => SolverPlan -> Env -> SolverPlan -> GenT m (Env, S
 stepPlan _ env plan@(SolverPlan []) = pure (env, plan)
 stepPlan (SolverPlan origStages) env (SolverPlan (stage@(SolverStage (x :: Var a) ps spec relevant) : pl)) = do
   let errorMessage = "Failed to step the plan" />
-                        vsep [ "Relevant parts of original plan:" //> pretty narrowedOrigPlan
-                             , "Relevant parts of the env:" //> pretty narrowedEnv
+                        vsep [ "Relevant parts of the original plan:" //> pretty narrowedOrigPlan
+                             , "Already generated variables:" //> pretty narrowedEnv
                              , "Current stage:" //> pretty stage
                              ]
       -- TODO: tests for this, including tests for transitive behaviour
