@@ -1,4 +1,6 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE ImpredicativeTypes #-}
+{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
@@ -13,6 +15,7 @@ module Constrained.Env (
   lookup,
   find,
   remove,
+  filterKeys,
 ) where
 
 import Constrained.Core
@@ -34,7 +37,7 @@ data EnvValue where
 deriving instance Show EnvValue
 
 data EnvKey where
-  EnvKey :: !(Var a) -> EnvKey
+  EnvKey :: Typeable a => !(Var a) -> EnvKey
 
 instance Eq EnvKey where
   EnvKey v == EnvKey v' = nameOf v == nameOf v'
@@ -50,7 +53,7 @@ extend :: (Typeable a, Show a) => Var a -> a -> Env -> Env
 extend v a (Env m) = Env $ Map.insert (EnvKey v) (EnvValue a) m
 
 -- | Remove a variable from an environment if it exists
-remove :: Var a -> Env -> Env
+remove :: Typeable a => Var a -> Env -> Env
 remove v (Env m) = Env $ Map.delete (EnvKey v) m
 
 -- | Create a singleton environment
@@ -70,13 +73,18 @@ find env var = do
     Just a -> pure a
     Nothing -> genError ("Couldn't find " ++ show var ++ " in " ++ show env)
 
+-- | Filter the keys in an env, useful for removing irrelevant variables in
+-- error messages
+filterKeys :: Env -> (forall a. Typeable a => Var a -> Bool) -> Env
+filterKeys (Env m) f = Env $ Map.filterWithKey (\ (EnvKey k) _ -> f k) m
+
 instance Pretty EnvValue where
-  pretty (EnvValue x) = pretty $ take 80 (show x)
+  pretty (EnvValue x) = viaShow x
 
 instance Pretty EnvKey where
   pretty (EnvKey x) = viaShow x
 
 instance Pretty Env where
-  pretty (Env m) = vsep ("Env" : (map f (Map.toList m)))
+  pretty (Env m) = vsep (map f (Map.toList m))
     where
       f (k, v) = hsep [pretty k, "->", pretty v]

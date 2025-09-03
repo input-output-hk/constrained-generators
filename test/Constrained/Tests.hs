@@ -85,6 +85,7 @@ tests nightly =
     testSpec "mapElemKeySpec" mapElemKeySpec
     -- TODO: double shrinking
     testSpecNoShrink "mapIsJust" mapIsJust
+    testSpecNoShrink "eitherKeys" eitherKeys
     testSpecNoShrink "intSpec" intSpec
     testSpecNoShrink "mapPairSpec" mapPairSpec
     testSpecNoShrink "mapEmptyDomainSpec" mapEmptyDomainSpec
@@ -235,6 +236,8 @@ negativeTests =
     testSpecFail "overconstrainedPrefixes" overconstrainedPrefixes
     testSpecFail "overconstrainedSuffixes" overconstrainedSuffixes
     testSpecFail "appendForAllBad" appendForAllBad
+    testSpecFail "manyInconsistent" manyInconsistent
+    testSpecFail "manyInconsistentTrans" manyInconsistentTrans
 
 testSpecFail :: HasSpec a => String -> Specification a -> Spec
 testSpecFail s spec =

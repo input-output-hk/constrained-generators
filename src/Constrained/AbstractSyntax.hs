@@ -134,6 +134,7 @@ fastInequality _ _ = True
 class Syntax (t :: [Type] -> Type -> Type) where
   isInfix :: t dom rng -> Bool
   isInfix _ = False
+
   prettySymbol ::
     forall deps dom rng ann.
     t dom rng ->
@@ -305,10 +306,9 @@ instance Pretty (PredD deps) where
         sep
           [ "memberPred"
           , pretty term
-          , "(" <> viaShow (length vs) <> " items)"
-          , brackets (fillSep (punctuate "," (map viaShow (NE.toList vs))))
+          , prettyShowList (NE.toList vs)
           ]
-    ElemPred False term vs -> align $ sep ["notMemberPred", pretty term, fillSep (punctuate "," (map viaShow (NE.toList vs)))]
+    ElemPred False term vs -> align $ sep ["notMemberPred", pretty term, prettyShowList (NE.toList vs)]
     Exists _ (x :-> p) -> align $ sep ["exists" <+> viaShow x <+> "in", pretty p]
     Let t (x :-> p) -> align $ sep ["let" <+> viaShow x <+> "=" /> pretty t <+> "in", pretty p]
     And ps -> braces $ vsep' $ map pretty ps
@@ -377,7 +377,7 @@ instance (Show a, Typeable a, Show (TypeSpecD deps a)) => Pretty (WithPrec (Spec
     ExplainSpec es z -> "ExplainSpec" <+> viaShow es <+> "$" /> pretty z
     ErrorSpec es -> "ErrorSpec" /> vsep' (map fromString (NE.toList es))
     TrueSpec -> fromString $ "TrueSpec @(" ++ showType @a ++ ")"
-    MemberSpec xs -> "MemberSpec" <+> short (NE.toList xs)
+    MemberSpec xs -> "MemberSpec" <+> prettyShowList (NE.toList xs)
     SuspendedSpec x p -> parensIf (d > 10) $ "constrained $ \\" <+> viaShow x <+> "->" /> pretty p
     -- TODO: require pretty for `TypeSpec` to make this much nicer
     TypeSpecD ts cant ->
@@ -385,7 +385,7 @@ instance (Show a, Typeable a, Show (TypeSpecD deps a)) => Pretty (WithPrec (Spec
         "TypeSpec"
           /> vsep
             [ fromString (showsPrec 11 ts "")
-            , viaShow cant
+            , prettyShowList cant
             ]
 
 instance (Show a, Typeable a, Show (TypeSpecD deps a)) => Pretty (SpecificationD deps a) where

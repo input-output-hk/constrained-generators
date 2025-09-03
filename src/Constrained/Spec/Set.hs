@@ -87,7 +87,7 @@ prettySetSpec :: HasSpec a => SetSpec a -> Doc ann
 prettySetSpec (SetSpec must elemS size) =
   parens
     ( "SetSpec"
-        /> sep ["must=" <> short (Set.toList must), "elem=" <> pretty elemS, "size=" <> pretty size]
+        /> sep ["must=" <> viaShow (Set.toList must), "elem=" <> pretty elemS, "size=" <> pretty size]
     )
 
 instance HasSpec a => Show (SetSpec a) where
@@ -163,7 +163,7 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
       ( NE.fromList
           [ "Choose size = " ++ show chosenSize
           , "szSpec' = " ++ show szSpec'
-          , "Picking items not in must = " ++ show (short (Set.toList must))
+          , "Picking items not in must = " ++ show (Set.toList must)
           , "that also meet the element test: "
           , "  " ++ show elemS
           ]
@@ -251,13 +251,13 @@ instance Semantics SetW where
   semantics = setSem
 
 instance Syntax SetW where
-  prettySymbol SubsetW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "subset_" <+> short (Set.toList n) <+> prettyPrec 10 y
-  prettySymbol SubsetW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "subset_" <+> prettyPrec 10 y <+> short (Set.toList n)
-  prettySymbol DisjointW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "disjoint_" <+> short (Set.toList n) <+> prettyPrec 10 y
-  prettySymbol DisjointW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "disjoint_" <+> prettyPrec 10 y <+> short (Set.toList n)
-  prettySymbol UnionW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "union_" <+> short (Set.toList n) <+> prettyPrec 10 y
-  prettySymbol UnionW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "union_" <+> prettyPrec 10 y <+> short (Set.toList n)
-  prettySymbol MemberW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "member_" <+> prettyPrec 10 y <+> short (Set.toList n)
+  prettySymbol SubsetW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "subset_" <+> prettyShowSet n <+> prettyPrec 10 y
+  prettySymbol SubsetW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "subset_" <+> prettyPrec 10 y <+> prettyShowSet n
+  prettySymbol DisjointW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "disjoint_" <+> prettyShowSet n <+> prettyPrec 10 y
+  prettySymbol DisjointW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "disjoint_" <+> prettyPrec 10 y <+> prettyShowSet n
+  prettySymbol UnionW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "union_" <+> prettyShowSet n <+> prettyPrec 10 y
+  prettySymbol UnionW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "union_" <+> prettyPrec 10 y <+> prettyShowSet n
+  prettySymbol MemberW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "member_" <+> prettyPrec 10 y <+> prettyShowSet n
   prettySymbol _ _ _ = Nothing
 
 instance (Ord a, HasSpec a, HasSpec (Set a)) => Semigroup (Term (Set a)) where

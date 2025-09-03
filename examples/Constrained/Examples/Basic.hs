@@ -319,3 +319,27 @@ wtfSpec = constrained' $ \ [var| options |] [var| mpair |] ->
         , assert $ unit ==. lit ()
         ]
     )
+
+manyInconsistent :: Specification (Int, Int, Int, Int, Int, Int)
+manyInconsistent = constrained' $ \ [var| a |] b c d e [var| f |] ->
+  [ assert $ a <. 10
+  , assert $ b >. a
+  , assert $ c >. b
+  , assert $ d >. c
+  , assert $ e >. d
+  , f `dependsOn` e
+  , assert $ f >. 10
+  , assert $ f <. a
+  ]
+
+manyInconsistentTrans :: Specification (Int, Int, Int, Int, Int, Int)
+manyInconsistentTrans = constrained' $ \ [var| a |] [var| b |] c d e [var| f |] ->
+  [ assert $ a <. 10
+  , assert $ b <. a
+  , assert $ c >. b
+  , assert $ d >. c
+  , assert $ e >. d
+  , f `dependsOn` e
+  , assert $ f >. 10
+  , assert $ f <. b
+  ]
