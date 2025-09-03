@@ -236,6 +236,8 @@ negativeTests =
     testSpecFail "overconstrainedPrefixes" overconstrainedPrefixes
     testSpecFail "overconstrainedSuffixes" overconstrainedSuffixes
     testSpecFail "appendForAllBad" appendForAllBad
+    testSpecFail "manyInconsistent" manyInconsistent
+    testSpecFail "manyInconsistentTrans" manyInconsistentTrans
 
 testSpecFail :: HasSpec a => String -> Specification a -> Spec
 testSpecFail s spec =

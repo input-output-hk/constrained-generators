@@ -99,7 +99,6 @@ import Constrained.FunctionSymbol
 import Constrained.GenT
 import Constrained.Generic
 import Constrained.List hiding (toList)
-import Constrained.PrettyUtils
 import Constrained.TypeErrors
 import Control.Monad.Writer (
   Writer,
