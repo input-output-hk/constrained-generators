@@ -27,7 +27,7 @@ module Constrained.Generation (
   shrinkWithSpec,
   simplifySpec,
 
-  -- ** Debuggin
+  -- ** Debugging
   printPlan,
   debugSpec,
   prettyPlan,
