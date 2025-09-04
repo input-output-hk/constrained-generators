@@ -251,13 +251,13 @@ instance Semantics SetW where
   semantics = setSem
 
 instance Syntax SetW where
-  prettySymbol SubsetW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "subset_" <+> prettyShowSet n <+> prettyPrec 10 y
-  prettySymbol SubsetW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "subset_" <+> prettyPrec 10 y <+> prettyShowSet n
-  prettySymbol DisjointW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "disjoint_" <+> prettyShowSet n <+> prettyPrec 10 y
-  prettySymbol DisjointW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "disjoint_" <+> prettyPrec 10 y <+> prettyShowSet n
-  prettySymbol UnionW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "union_" <+> prettyShowSet n <+> prettyPrec 10 y
-  prettySymbol UnionW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "union_" <+> prettyPrec 10 y <+> prettyShowSet n
-  prettySymbol MemberW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "member_" <+> prettyPrec 10 y <+> prettyShowSet n
+  prettySymbol SubsetW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "subset_" <+> prettyShowSet n <+> prettyPrec 11 y
+  prettySymbol SubsetW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "subset_" <+> prettyPrec 11 y <+> prettyShowSet n
+  prettySymbol DisjointW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "disjoint_" <+> prettyShowSet n <+> prettyPrec 11 y
+  prettySymbol DisjointW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "disjoint_" <+> prettyPrec 11 y <+> prettyShowSet n
+  prettySymbol UnionW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "union_" <+> prettyShowSet n <+> prettyPrec 11 y
+  prettySymbol UnionW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "union_" <+> prettyPrec 11 y <+> prettyShowSet n
+  prettySymbol MemberW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "member_" <+> prettyPrec 11 y <+> prettyShowSet n
   prettySymbol _ _ _ = Nothing
 
 instance (Ord a, HasSpec a, HasSpec (Set a)) => Semigroup (Term (Set a)) where
