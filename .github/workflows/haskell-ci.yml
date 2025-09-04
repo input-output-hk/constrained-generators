@@ -56,8 +56,40 @@ jobs:
           compression-level: 0
           retention-days: 1
 
+  # TODO: turn this on in the next PR and figure out how to present both reports
+  # master-coverage:
+  #   name: Check coverage on master
+
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         ref: master
+  #     - uses: haskell-actions/setup@v2
+  #       with:
+  #         ghc-version: latest
+  #     - uses: actions/cache@v4
+  #       with:
+  #         key: master
+  #         path: |
+  #           ~/.cabal/store
+  #           dist-newstyle
+  #           .hpc
+  #     - run: cabal test all --ghc-options=-fhpc
+  #     - run: ./scripts/generate-coverage-comment.sh constrained.tix > coverage-report-master.md
+  #     - run: cat coverage-report-master.md
+  #     - name: Upload coverage report
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: constrained-master-coverage
+  #         path: coverage-report-master.md
+  #         if-no-files-found: error
+  #         compression-level: 0
+  #         retention-days: 1
+
   report:
-    name: Generate coverage report
+    name: Generate coverage comment
 
     if: github.event.pull_request
 
