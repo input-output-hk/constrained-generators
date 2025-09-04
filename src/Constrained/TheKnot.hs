@@ -206,7 +206,7 @@ instance Syntax ProdW where
 prettySelect :: Int -> TermD deps t -> Maybe (Doc ann)
 prettySelect i (App f (t :> Nil))
   | Just ProdSndW <- getWitness f = prettySelect (i + 1) t
-  | Just ToGenericW <- getWitness f = Just $ "sel @" <> pretty i <+> pretty t
+  | Just ToGenericW <- getWitness f = Just $ "sel @" <> pretty i <+> prettyPrec 10 t
 prettySelect _ _ = Nothing
 
 instance Semantics ProdW where
