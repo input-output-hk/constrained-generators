@@ -43,6 +43,7 @@ module Constrained.NumOrd (
   OrdLike (..),
   MaybeBounded (..),
   NumLike (..),
+  HasDivision (..),
   Numeric,
   Number,
   nubOrd,
