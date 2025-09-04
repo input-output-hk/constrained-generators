@@ -198,7 +198,16 @@ deriving instance Eq (ProdW as b)
 
 deriving instance Show (ProdW as b)
 
-instance Syntax ProdW
+instance Syntax ProdW where
+  prettySymbol ProdW _ _ = Nothing
+  prettySymbol ProdFstW (t :> Nil) p = parensIf (p > 10) <$> prettySelect 0 t
+  prettySymbol ProdSndW (t :> Nil) p = parensIf (p > 10) <$> prettySelect 1 t
+
+prettySelect :: Int -> TermD deps t -> Maybe (Doc ann)
+prettySelect i (App f (t :> Nil))
+  | Just ProdSndW <- getWitness f = prettySelect (i + 1) t
+  | Just ToGenericW <- getWitness f = Just $ "sel @" <> pretty i <+> pretty t
+prettySelect _ _ = Nothing
 
 instance Semantics ProdW where
   semantics ProdW = Prod
