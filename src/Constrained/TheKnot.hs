@@ -51,7 +51,6 @@ module Constrained.TheKnot (
   rangeSize,
   hasSize,
   genInverse,
-  mapSpec,
   between,
 
   -- * Patterns
@@ -77,7 +76,6 @@ import Constrained.SumList
 -- Because it is mutually recursive with something else in here.
 import Constrained.Syntax
 import Control.Applicative
-import Control.Monad
 import Data.Foldable
 import Data.Kind
 import Data.List (nub)
@@ -98,27 +96,6 @@ ifElse b p q = whenTrue b p <> whenTrue (not_ b) q
 -- --------------- Simplification of Sum types --------------------
 
 -- =======================================================================================
-
--- | Functor like property for Specification, but instead of a Haskell function (a -> b),
---   it takes a function symbol (t '[a] b) from a to b.
---   Note, in this context, a function symbol is some constructor of a witnesstype.
---   Eg. ProdFstW, InjRightW, SingletonW, etc. NOT the lifted versions like fst_ singleton_,
---   which construct Terms. We had to wait until here to define this because it
---   depends on Semigroup property of Specification, and Asserting equality
-mapSpec ::
-  forall t a b.
-  AppRequires t '[a] b =>
-  t '[a] b ->
-  Specification a ->
-  Specification b
-mapSpec f (ExplainSpec es s) = explainSpec es (mapSpec f s)
-mapSpec f TrueSpec = mapTypeSpec f (emptySpec @a)
-mapSpec _ (ErrorSpec err) = ErrorSpec err
-mapSpec f (MemberSpec as) = MemberSpec $ NE.nub $ fmap (semantics f) as
-mapSpec f (SuspendedSpec x p) =
-  constrained $ \x' ->
-    Exists (\_ -> fatalError "mapSpec") (x :-> fold [Assert $ (x' ==. appTerm f (V x)), p])
-mapSpec f (TypeSpec ts cant) = mapTypeSpec f ts <> notMemberSpec (map (semantics f) cant)
 
 -- ================================================================
 -- HasSpec for Products

@@ -343,3 +343,23 @@ manyInconsistentTrans = constrained' $ \ [var| a |] [var| b |] c d e [var| f |] 
   , assert $ f >. 10
   , assert $ f <. b
   ]
+
+complicatedEither :: Specification (Either Int Int, (Either Int Int, Int, Int))
+complicatedEither = constrained' $ \ [var| i |] [var| t |] ->
+  [ caseOn i
+      (branch $ \ a -> a `elem_` lit [1..10])
+      (branch $ \ b -> b `elem_` lit [1..10])
+  , match t $ \ [var| k |] _ _ ->
+    [ k ==. i
+    , not_ $ k `elem_` lit [ Left j | j <- [1..9] ]
+    ]
+  ]
+
+pairCant :: Specification (Int, (Int, Int))
+pairCant = constrained' $ \ [var| i |] [var| p |] ->
+  [ assert $ i `elem_` lit [1..10]
+  , match p $ \ [var| k |] _ ->
+    [ k ==. i
+    , not_ $ k `elem_` lit [1..9]
+    ]
+  ]
