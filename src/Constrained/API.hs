@@ -17,6 +17,7 @@ module Constrained.API (
   HasGenHint (..),
   Sized (..),
   NumLike (..),
+  HasDivision (..),
   GenericallyInstantiated,
   IsPred,
   Logic,
