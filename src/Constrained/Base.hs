@@ -32,10 +32,11 @@ module Constrained.Base (
   pattern (:<:),
   pattern (:>:),
   pattern Unary,
-  Ctx,
+  Ctx(..),
   toCtx,
   flipCtx,
   fromListCtx,
+  ctxHasSpec,
 
   -- * Useful function symbols and patterns for building custom rewrite rules
   fromGeneric_,
