@@ -57,7 +57,7 @@ jobs:
             .hpc
           restore-keys: ${{ matrix.ghc-version }}-
 
-      - if: ${{ env.coverage }}
+      - if: ${{ env.coverage == true }}
         run: |
           cat <<EOF >>cabal.project.local
           program-options
@@ -72,18 +72,18 @@ jobs:
       # one in this PR.  This is important in order to get the same
       # coverage-counting logic on the PR as on master.
       - uses: actions/checkout@v4
-        if: ${{ env.coverage }}
+        if: ${{ env.coverage == true }}
         with:
           ref: ${{ github.head_ref }}
           sparse-checkout:
             scripts
           clean: false
 
-      - if: ${{ env.coverage }}
+      - if: ${{ env.coverage == true }}
         run: ./scripts/generate-coverage-comment.sh constrained.tix | tee coverage-report-${{matrix.ref}}.md
 
       - name: Upload coverage report
-        if: ${{ env.coverage }}
+        if: ${{ env.coverage == true }}
         uses: actions/upload-artifact@v4
         with:
           name: constrained-${{matrix.ref}}-coverage
