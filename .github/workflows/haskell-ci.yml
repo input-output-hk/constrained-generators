@@ -14,9 +14,6 @@ on:
   schedule:
     - cron: 0 0 * * *
 
-env:
-  latest_ghc: "9.12"
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -27,10 +24,10 @@ jobs:
 
     strategy:
       matrix:
-        ghc-version: ["${{ env.latest_ghc }}", "9.10", "9.8", "9.6"]
+        ghc-version: ["9.12", "9.10", "9.8", "9.6"]
         ref: ["${{ github.head_ref }}"]
         include:
-          - ghc-version: ${{ env.latest_ghc }}
+          - ghc-version: "9.12"
             ref: master
       fail-fast: false
 
