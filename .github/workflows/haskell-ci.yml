@@ -57,6 +57,12 @@ jobs:
             .hpc
           restore-keys: ${{ matrix.ghc-version }}-
 
+      - run: |
+          echo ${{ env.coverage }}
+          echo ${{ github.event.pull_request }}
+          echo ${{ matrix.ghc-version }}
+          echo ${{ matrix.ghc-version == '9.12' }}
+
       - if: ${{ env.coverage == true }}
         run: |
           cat <<EOF >>cabal.project.local
