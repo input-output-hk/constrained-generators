@@ -26,6 +26,9 @@ jobs:
       matrix:
         ghc-version: ["9.12", "9.10", "9.8", "9.6"]
         ref: ["${{ github.head_ref }}"]
+        # This gives us one run for `master` with ghc version 9.12.
+        # We use this run to give us "up to date" coverage data that
+        # we can compare to.
         include:
           - ghc-version: "9.12"
             ref: master
@@ -62,7 +65,9 @@ jobs:
       - run: cabal test all
       - run: cabal haddock all
 
-      # To get the right version of `generate-coverage-comment.sh`
+      # To get the right version of `generate-coverage-comment.sh`. I.e. the
+      # one in this PR.  This is important in order to get the same
+      # coverage-counting logic on the PR as on master.
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
