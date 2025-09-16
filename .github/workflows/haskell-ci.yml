@@ -111,7 +111,6 @@ jobs:
           cat coverage-report-master.md >> coverage-report.md
           cat coverage-report.md
 
-
       - name: Find Comment
         uses: peter-evans/find-comment@v3
         id: fc
