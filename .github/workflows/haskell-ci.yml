@@ -14,6 +14,9 @@ on:
   schedule:
     - cron: 0 0 * * *
 
+env:
+  latest_ghc: "9.12"
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -54,7 +57,7 @@ jobs:
             .hpc
           restore-keys: ${{ matrix.ghc-version }}-
 
-      - if: ${{ github.event.pull_request }}
+      - if: ${{ github.event.pull_request and matrix.ghc_version == env.latest_ghc }}
         run: |
           cat <<EOF >>cabal.project.local
           program-options
@@ -69,20 +72,21 @@ jobs:
       # one in this PR.  This is important in order to get the same
       # coverage-counting logic on the PR as on master.
       - uses: actions/checkout@v4
+        if: ${{ github.event.pull_request and matrix.ghc_version == env.latest_ghc }}
         with:
           ref: ${{ github.head_ref }}
           sparse-checkout:
             scripts
           clean: false
 
-      - if: ${{ github.event.pull_request }}
+      - if: ${{ github.event.pull_request and matrix.ghc_version == env.latest_ghc }}
         run: ./scripts/generate-coverage-comment.sh constrained.tix | tee coverage-report-${{matrix.ref}}.md
 
       - name: Upload coverage report
-        if: ${{ github.event.pull_request }}
+        if: ${{ github.event.pull_request and matrix.ghc_version == env.latest_ghc }}
         uses: actions/upload-artifact@v4
         with:
-          name: constrained-${{matrix.ref}}-${{matrix.ghc-version}}-coverage
+          name: constrained-${{matrix.ref}}-coverage
           path: coverage-report-${{matrix.ref}}.md
           if-no-files-found: error
           compression-level: 0
@@ -101,13 +105,13 @@ jobs:
       - name: Download coverage report
         uses: actions/download-artifact@v4
         with:
-          pattern: 'constrained-${{github.head_ref}}-9.12-coverage'
+          pattern: 'constrained-${{github.head_ref}}-coverage'
           merge-multiple: true
 
       - name: Download coverage report from `master`
         uses: actions/download-artifact@v4
         with:
-          pattern: 'constrained-master-9.12-coverage'
+          pattern: 'constrained-master-coverage'
           merge-multiple: true
 
       - run: |
