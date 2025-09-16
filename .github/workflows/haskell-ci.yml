@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      coverage: ${{ github.event.pull_request && (matrix.ghc_version == '9.12') }}
+      coverage: ${{ github.event.pull_request && (matrix.ghc-version == '9.12') }}
 
     steps:
       - uses: actions/checkout@v4
