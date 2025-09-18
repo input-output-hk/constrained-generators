@@ -60,7 +60,7 @@ tests :: Bool -> Spec
 tests nightly =
   describe "constrained" . modifyMaxSuccess (\ms -> if nightly then ms * 10 else ms) $ do
     testSpec "complicatedEither" complicatedEither
-    testSpec "pairCatn" pairCant
+    testSpec "pairCant" pairCant
     -- TODO: double-shrinking
     testSpecNoShrink "reifiesMultiple" reifiesMultiple
     testSpec "assertReal" assertReal
