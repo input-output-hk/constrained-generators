@@ -2,9 +2,8 @@
 
 The markdown source of this file can be obtained
 [here](https://github.com/input-output-hk/constrained-generators/blob/master/docs/Manual.md)
-
-All the examples in this file can be obtained
-[here](https://github.com/input-output-hk/constrained-generators/blob/master/examples/Constrained/Examples/ManualExamples.hs)
+and all the examples in this file can be found
+[here](https://github.com/input-output-hk/constrained-generators/blob/master/examples/Constrained/Examples/ManualExamples.hs).
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
@@ -54,73 +53,85 @@ All the examples in this file can be obtained
 
 ## Constrained Generators is a First-Order Logic
 
-
 A First-order typed logic (FOTL) has 4 components, where each component uses types to ensure well-formedness.
 
 1. **Terms** consisting of
    - Variables: `x`, `y` .
    - Constants: `5`, `"abc"`, `True` .
-   - Applications: `elem_ "abc" xs`.  Applications apply a function symbol (i.e. `elem_`) to a list of Terms, or support infix application (i.e. `abc ==. y`)
+   - Function symbols: `elem_`, `(==.)`, `(++.)`
+   - Applications: `elem_ "abc" xs`.
 2. **Predicates**   (Assert (x ==. 5)). Predicates are the assertions of boolean typed terms.
 3. **Connectives**  (And, Not, =>).  Connectives make more complex Predicates out of simpler ones.
 4. **Quantifiers**  (Forall, Exists)
 
-The **Constrained generators** system is almost a FOTL implemented as an embedded domain specific language in Haskell.
-We say almost, because it doesn't really have a complete set of connectives.
-It allows programmers to write Haskell programs with type `Specification T` that denote a set of random
-values for the type `T`, that are subject to a set of constraints expressed as Predicates. This supports property
-based testing where a completely random set of values may not be useful.
-
+The **Constrained generators** system is almost a FOTL implemented as an
+embedded domain specific language in Haskell.  We say almost, because it
+doesn't really have a complete set of connectives.  It allows programmers to
+write Haskell programs with type `Specification T`, denoting a set of values of
+type `T`, using declarative constraints. A `Specification T` in turn can be
+used to both _check_ constraints: `check :: Specification T -> (T -> Bool)`,
+and _generate values_: `gen :: Specification T -> Gen T`. This supports
+property based testing where a completely random set of values may not be
+useful without having to write explicit random generation logic.
 
 ## Design Goals of the Library
 
 The system was designed to have several important properties
 
-1.  A Specification determines a `QuickCheck` generator for generating random values subject to constraints.
-2.  A Specification determines a check that a particular value meets all the specifications constraints.
-3. If a Specification is over constrained, the system tries to explain where the conflict  occurs.
-4. The system is extensible so specifications can be extended to any type.
-5. The system is modular so it can be broken into independant modules.
+1. A Specification determines a `QuickCheck` generator for generating random
+   values subject to constraints.
+2. A Specification determines a check that a particular value meets all the
+   specifications constraints.
+3. The system is compositional so specifications can be re-used
+4. If a Specification is over-constrained, the system tries to explain where
+   the conflict occurs.
+5. The system is extensible so that it can accomodate new types and functions.
 
-The first part is implemented by the function `genFromSpec`
-
-```
+Point (1) is implemented by the following function
+```haskell
 genFromSpec :: HasSpec a => Specification a -> QuickCheck.Gen a
 ```
-
-The second is implemented by the function `conformsToSpec`
-
-```
+and (2) by this function:
+```haskell
 conformsToSpec :: HasSpec a => a -> Specification a -> Bool
 ```
-
-The third is embodied by the error messages when solving a constraint fails
-
-
-The **Constrained Generators** system is implemented as an embeded domain specific language in Haskell.
-The Terms, Predicates, Connectives, and Quantifiers of the first order logic are embedded into three
-Haskell datatypes (`Specification t`, `Term t`, and `Pred`). There is a rich (extendable) library
-of Haskell functions that can be used to define and construct values of these types.  The library is
-implemented in a such a way, that the four parts of the logic are defined in ways that are similar
-to Haskell expressions with type Bool.
-
-Let us look at a simple example, and study how this is done. Below is a Haskell declaration that defines a
-specification of a pair of Int (`p`) , subject to the constraint that the first component (`x`)
-is less than or equal to the second component (`y`) plus 2
-
+(3) is captured succinctly by:
+```haskell
+instance Monoid (Specification t) -- This is far from the whole story...
 ```
+while (4) is embodied primarily in the error messages given when `genFromSpec`
+fails. Point (5) meanwhile requires a bit of explanation and will in no small part
+be the subject of this document.
+
+The **Constrained Generators** system is implemented as an embeded domain
+specific language in Haskell.  The Terms, Predicates, Connectives, and
+Quantifiers of the first order logic are embedded into three Haskell datatypes
+(`Specification t`, `Term t`, and `Pred`). There is a rich (extendable) library
+of Haskell functions that can be used to define and construct values of these
+types. The library is implemented in a such a way, that the four parts of the
+logic are defined in ways that are similar (but different in important ways we
+will cover below) to Haskell expressions of type Bool.
+
+Let us look at a simple example and study how this is done. Below is a Haskell
+declaration that defines a specification of a pair of Int (`p`) , subject to
+the constraint that the first component (`x`) is less than or equal to the
+second component (`y`) plus 2
+
+```haskell
 leqPair :: Specification (Int, Int)
 leqPair = constrained $ \ p ->
    match p $ \ x y ->
      assert (x <=. (y + lit 2))
 ```
 
-The library uses Haskell lambda expressions to introduce variables in the Term language of the system,
-and Haskell functions to build Terms and Predicates. The Haskell function `lit` takes Haskell values
-and turns them into constants in the Term language. We give monomorphic types to the Haskell functions used in the
-above definitions. We discuss more general types in a [later section](#overloaded).
+The library uses Haskell lambda expressions to introduce variables in the Term
+language of the system, and Haskell functions to build `Term`s and
+`Predicate`s. The Haskell function `lit` takes Haskell values and turns them
+into constants in the Term language. We'll give partially monomorphized types
+to the Haskell functions used in the above definitions. We discuss more general
+types in a [later section](#overloaded).
 
-```
+```haskell
 constrained :: HasSpec a => (Term a -> Pred) -> Specification a
 
 match :: (HasSpec a, HasSpec b) => Term (a,b) -> (Term a -> Term b -> Pred) -> Pred
@@ -132,13 +143,15 @@ assert :: Term Bool -> Pred
 (<=.) :: OrdLike a => Term a -> Term a -> Term Bool
 ```
 
-The Haskell Constraint `HasSpec a` states that the type `a` has been admitted to the system as one of the types
-that can be subject to constraints. The system comes with a large set of `HasSpec` instances, including ones for:
+The Haskell Constraint `HasSpec a` states that the type `a` has been admitted
+to the system as one of the types that can be subject to constraints. The
+system comes with a large set of `HasSpec` instances for types in `base` and
+`containers`, including ones for:
 
 1. Bool
 2. Tuples
 3. Sums
-4. Numeric types (Int, Integer, Natural, Int8, Int16, Int32, Int64, Word8, Word16, Word32, Word64)
+4. Numeric types (Int, Integer, Natural, Int/Word{8,16,32,64})
 5. Lists
 6. Maps
 7. Sets
@@ -149,21 +162,26 @@ that can be subject to constraints. The system comes with a large set of `HasSpe
 
 ## HasSpec instances
 
-`HasSpec` instances can always be added to admit more types. Any type with a `GHC.Generics(Generic)` instance can be
-given a default instance by using its Sum-of-Products generic definition. In the Cardano Ledger System
-over 200 types in the Ledger code base have been given `HasSpec` instances, either by using the `GHC.Generics` path, or by writing the instances by hand.
+`HasSpec` instances can always be added to admit more types. Any type with a
+`Generic` instance can be given a default instance by using its generic
+definition - provided that the types it uses have `HasSpec` instances. In the
+Cardano Ledger System over 200 types in the Ledger code base have been given
+`HasSpec` instances, either by using the `GHC.Generics` path, or by writing the
+instances by hand (more on this later).
 
 ## Building logic specifications using Haskell functions
 
-Note that `constrained` and `match` take functions, which abstract over terms, and return `Specification` and `Pred`.
-Using the library functions, variables in the Term language are always introduced using Haskell lambda abstractions. And the library
-functions combine these into Terms, Preds, and Specifications.
+Note that `constrained` and `match` take functions, which abstract over terms,
+and return `Specification` and `Pred`. Using the library functions, variables
+in the Term language are always introduced using Haskell lambda abstractions.
+And the library functions combine these into Terms, Preds, and Specifications.
 
 ## Another example using conjunction and simple arithmetic
 
-Suppose we want to put more than one simple condition on the pair of Ints. We would do that using the connective `And` that converts a `[Pred]` into a `Pred`
+Suppose we want to put more than one simple condition on the pair of Ints. We
+would do that using the connective `And` that converts a `[Pred]` into a `Pred`
 
-```
+```haskell
 sumPair :: Specification (Int, Int)
 sumPair = constrained $ \p ->
   match p $ \x y ->
@@ -174,45 +192,43 @@ sumPair = constrained $ \p ->
       ]
 ```
 
-This example also re-illustrates that `(Term Int)` has a (partial) Num instance, and that we can constrain
-multiple (different) variables using simple `Num` methods (`(+)`, `(-)`,  and `negate`). Note also
-the operator: `(==.) :: (Eq n, HasSpec n) => Term n -> Term n -> Term Bool`
+This example also re-illustrates that `(Term Int)` has a (partial) Num
+instance, and that we can constrain multiple (different) variables using simple
+`Num` methods (`(+)`, `(-)`, `(*)`, and `negate`). Note also the operator:
+`(==.) :: (Eq n, HasSpec n) => Term n -> Term n -> Term Bool`
 
 ## Function Symbols
 
-Note that `(<=.)` , and `(==.)` are two of the function symbols in the first order logic. They obey a
-useful naming convention. Infix function symbols corresponding to Haskell infix operators have
-corresponding infix operators,  lifting Haskell infix functions with type `(a -> b -> c)`, to library infix
-functions which have analogous types `(Term a -> Term b -> Term c)`
-and are named using the convention that we add the dot `(.)` to the end of the Haskell operator.
+Note that `(<=.)` and `(==.)` are two of the function symbols in the first
+order logic. They obey a useful naming convention. Infix operators
+corresponding to Haskell infix operators named using the convention that we add
+the dot `(.)` to the end of the Haskell operator.
 
-A similar naming convention holds for function symbols which are not infix, except instead of adding a
-dot to the end of the Haskell name, we add an underscore (`_`) to the end of the Haskell functions's
-name. Some examples follow.
+A similar naming convention holds for normal prefix function symbols,
+except instead of adding a dot to the end of the Haskell name, we add an
+underscore (`_`) to the end of the Haskell functions's name. Some examples
+follow.
 
-```
-(fst :: (a,b) -> a)` **to**
-(fst_ :: (HasSpec a,HasSpec b) => Term (a,b) -> Term a)
-```
-```
-(snd :: (a,b) -> b) **to**
-(snd_ :: (HasSpec a,HasSpec b) => Term (a,b) -> Term b)
-```
+```haskell
+fst_ :: (HasSpec a,HasSpec b) => Term (a,b) -> Term a
+-- Corresponds to
+fst :: (a,b) -> a
 
-```
-(not :: Bool -> Bool) **to**
-(not_ :: Term Bool -> Term Bool)
-```
+snd_ :: (HasSpec a,HasSpec b) => Term (a,b) -> Term b
+-- Corresponds to
+snd :: (a,b) -> b
 
-```
-(member :: a -> Set a -> Bool) **to**
-(member_ :: HasSpec a => Term a -> Term (Set a) -> Term Bool)
+member_ :: HasSpec a => Term a -> Term (Set a) -> Term Bool
+-- Corresponds to
+member :: a -> Set a -> Bool
+-- etc
 ```
 
-While the underscored function symbols, may appear to be just to an Applicative lifting over `Term`, that is not the case.
-An Applicative lifting would allow the base function to be applied under the `Term` type, but The underscored function symbols
-also know how to reason logically about the function.
-
+While the underscored function symbols may appear to be just to an Applicative
+lifting over `Term`, that is not the case. An Applicative lifting would allow
+the base function to be applied under the `Term` type, but the underscored
+function symbols also know how to reason logically about the function and are
+not easily lifted from simple haskell functions.
 
 ## Predefined HasSpec instances and their function symbols.
 
@@ -221,9 +237,9 @@ A type with a `HasSpec` instance might have a number of Function Symbols that op
 There are a number of types that have predefined `HasSpec` instances. As a reference, we list them
 here along with the types of their function symbols.
 
-### Function symbols for numeric types
+### Numeric Types
 
-`(Int, Integer, Natural, Int8, Int16, Int32, Int64, Word8, Word16, Word32, Word64)`
+`(Int, Integer, Natural, Int/Word{8, 16, 32, 64})`
 
 The function symbols of numeric types are:
 
@@ -234,24 +250,23 @@ The function symbols of numeric types are:
  5. `(==.) :: (Eq a, HasSpec a) => Term a -> Term a -> Term Bool`
  6.  A partial Num instance for (Term n) where n is a Numeric type. Operators `(+)`, `(-)`, `(*)`
 
-### Function symbols for Bool
+### Booleans
 
 The function symbols of `Bool` are:
 
   1.  `(||.) :: Term Bool -> Term Bool -> Term Bool`  infix `or`
   2.  `not_ :: Term Bool -> Term Bool`
 
-###  Function symbols for List
+### Lists
 
-`HasSpec a => HasSpec [a]`
+We have the instance `HasSpec a => HasSpec [a]`.
 
 The function symbols of `[a]` are:
-
   1.  `foldMap_ :: (Sized [a], Foldy b, HasSpec a) => (Term a -> Term b) -> Term [a] -> Term b`
   2.  `singletonList_ :: (Sized [a], HasSpec a) => Term a -> Term [a]`
   3.  `append_  :: (Sized [a], HasSpec a) => Term [a] -> Term [a] -> Term [a]`
 
-###  Function symbols for Set
+### Sets
 
 `HasSpec a => HasSpec (Set a)`
 
@@ -264,7 +279,7 @@ The function symbols of `(Set a)` are:
   5.  `disjoint_ :: (Ord a, HasSpec a) => Term (Set a) -> Term (Set a) -> Term Bool`
   6.  `fromList_ :: (Ord a, HasSpec a) => Term [a] -> Term (Set a)`
 
-###  Function symbols for Map
+### Maps
 
 `(HasSpec k, HasSpec v) => HasSpec (Map k v)`
 
@@ -281,10 +296,9 @@ Once we have written a `Specification` what can we do with it? Specifications ha
 1.  We can interpret it as a generator of values the meet all the constraints inside the specification.
 2.  We can interpret it as a function that checks if a given value meets all the constraints inside the specification.
 
-
 The first interpretation of the specification is the function `genFromSpec`
 
-```
+```haskell
 --| Generate a value from the spec in the QuickCheck monad 'Gen'
 genFromSpec:: (HasCallStack, HasSpec a) => Specification a -> QuickCheck.Gen a
 ```
@@ -296,11 +310,11 @@ Consider a system of 4 variables _w,x,y,z_ where we want to test the QuickCheck 
 `(w < x && x < y && y < z) ==> property (w < z)`
 We might write a QuickCheck property like this
 
-```
-prop1 :: Gen Property
+```haskell
+prop1 :: Property
 prop1 = do
-   (w,x,y,z) <- arbitrary :: Gen (Int,Int,Int,Int)
-   pure $ (w < x && x < y && y < z) ==> property (w < z)
+  forAll arbitrary $ \(w,x,y,z) :: (Int,Int,Int,Int) ->
+   (w < x && x < y && y < z) ==> property (w < z)
 ```
 
 The problem with this is that the probability that the condition `(w < x && x < y && y < z)` is True, for random
@@ -315,107 +329,96 @@ ghci> quickCheck prop1
 A vacuous pass, becomes a QuickCheck `discard`, so we cannot find 100 successful passes.
 We can do a better job by constraining the condition using `genFromSpec`
 
-```
+```haskell
 spec1 :: Specification (Int,Int,Int,Int)
 spec1 = constrained' $ \ w x y z -> [w <. x, x <. y, y <. z]
 
-prop2:: Gen Property
-prop2 = do
-   (w,x,y,z) <- genFromSpec spec1
-   pure $ (w < x && x < y && y < z) ==> property (w < z)
+prop2:: Property
+prop2 =
+  forAll (genFromSpec spec1) $ \(w,x,y,z)
+    (w < x && x < y && y < z) ==> property (w < z)
 ```
 
-Now the test passes.
+Now the test passes!
 
 ```
 ghci> quickCheck prop2
 +++ OK, passed 100 tests.
 ```
 
-Now this isn't a very good test either, since the precedent is alway true. A better solution would be to
-generate a mix, where the precedent is True most of the time, but sometimes False. Like this.
-
-```
-prop3:: Gen Property
-prop3 = do
-   (w,x,y,z) <- frequency [(9,genFromSpec spec1),(1,arbitrary)]
-   pure $ (w < x && x < y && y < z) ==> property (w < z)
-```
-
-Observe the result:
-
-```
-ghci> quickCheck prop3
-+++ OK, passed 100 tests; 7 discarded.
-```
-
-The  `7 discarded` arises because in most random samples of `w`, `x`, `y`, and `z`, the ordering constraint will
-not be true, so a discard will occur. Because the ratio of constrained to random is 9 to 1, so the number
-of failures is small enough that we don't `give up`. The role of the `arbitrary` is to guard against the possibility
-that the constrained spec might be over constrained, and in that case will be values that will never be chosen in a random test.
-Which means we will not be choosing a good sample of the test space, so some bugs might escape detection.
-By adjusting the test so that any `arbitrary` samples, that are not ordered, pass the test, we identify
-a piuntin the sample space that the code does not handle correctly. In a later section we discuss how to use
-QuickChrck `classify` and `cover` write better tests.
-
-The purpose of constrained generators is to make it possible to write conditional 'implication' properties
-that have a high probability of not being vacuously true, and to combine this with other random
-techniques to make better samples of the test-space.
-
-
 The second interpretation of the specification is as a constraint checker, implemented as the function.
 
-```
+```haskell
 conformsToSpec :: HasSpec a => a -> Specification a -> Bool
 ```
 
+Using this we can write a (admittedly silly) test that showcases this explicitly:
+
+```haskell
+spec1 :: Specification (Int,Int,Int,Int)
+spec1 = constrained' $ \ w x y z -> [w <. x, x <. y, y <. z]
+
+prop2' :: Property
+prop2' =
+  forAll (genFromSpec spec1) $ \(w,x,y,z)
+    (w,x,y,z) `conformsToSpec` spec1 ==> property (w < z)
+```
+
+Which similarly will always succeed and should never be discarded.
+
 ## How we solve the constraints
+
+Before we continue delving into how we use the library and the finer points
+surrounding generics and overloading it's worth-while to take a detour into how
+we solve constraints. Understanding and internalising this will be helpful when
+writing anything but the simplest generators.
 
 The strategy for generating things from `Pred`s is relatively straightforward
 and relies on one key fact: any constraint that has only one free variable `x`
 and where `x` occurs only once can be turned into a `Specification` for `x`.
 
-We say that such constraints _define_ `x` and given a set of constraints `ps`
-and a variable `x` we can split `ps` into the constraints that define `x` and
-any constraints that don't. We can then generate a value from `x` by computing
-a spec for each defining constraint in `ps` and using the `Semigroup` structure
-of `Specification`s to combine them and give them to `genFromSpecT`. Once we obtain a
-value for `x` we can substitute this value in all other constraints and pick
-another variable to solve.
+We say that such constraints _define_ `x` (alt. are _defining_ for `x`) and
+given a set of constraints `ps` and a variable `x` we can split `ps` into the
+constraints that define `x` and any constraints that don't. We can then
+generate a value from `x` by computing a spec for each _defining constraint_ in
+`ps` and using the `Semigroup` structure of `Specification`s to combine them
+and give them to `genFromSpecT`. Once we obtain a value for `x` we can
+substitute this value in all other constraints and pick another variable to
+solve.
 
 For example, given the following constraints on integers `x` and `y`
 
 ```
-  x <. 10
-  3 <=. x
-  y <. x
+x <. 10
+3 <=. x
+y <. x
 ```
 
 we see that `x <. 10` and `3 <=. x.` are defining constraints for `x` and there
-are no defining constraints for `y`. We compute a `Specification` for `x` for each
+are no defining constraints for `y` (yet!). We compute a `Specification` for `x` for each
 constraint, in this case `x <. 10` turns into something like `(-∞,10)` and
 `3 <=. x` turns into `[3, ∞)`. We combine the specs to form `[3, 10)` from which we
 can generate a value, e.g. 4 (chosen by fair dice roll). We then substitute
 `[x := 4]` in the remaining constraints and obtain `y <. 4`, giving us a defining
-constraint for `y`.
+constraint for `y`. We then repeat the process for `y`, giving us a specification
+like `(-∞,4)` for `y`, from which we can generate a value.
 
 ### How to pick the variable order
 
 At this point it should be relatively clear that the order we pick for the
 variables matters a great deal. If we choose to generate `y` before `x` in our
 example we will have no defining constraints for `y` and so we pick a value for
-it freely. But that renders `x` unsolvable if `y > 9` - which will result in
+it freely. But that may render `x` unsolvable if `y > 9` - which will result in
 the generator failing to generate a value (one could consider backtracking, but
-that is very computationally expensive so _relying_ on it would probably not be
-wise).
+that is very computationally expensive so _relying_ on it would not be wise).
 
 Computing a good choice of variable order that leaves the least room for error
-is obviously undecidable and difficult and we choose instead an explicit
-syntax-directed variable order. Specifically, variable dependency in terms is
-_left-to-right_, meaning that the variables in `x + y <. z` will be solved in
-the order `z -> y -> x`. On top of that there is a constraint `dependsOn y x`
-that allows you to overwrite the order of two variables. Consequently, the
-following constraints will be solved in the order `z -> x -> y`:
+is difficult and we choose instead an explicit syntax-directed variable order.
+Specifically, variable dependency in terms is _left-to-right_, meaning that the
+variables in `x + y <. z` will be solved in the order `z -> y -> x`. On top of
+that there is a constraint `dependsOn y x` that allows you to overwrite the
+order of two variables. Consequently, the following constraints will be solved
+in the order `z -> x -> y`:
 
 ```
   x + y <. z
@@ -466,7 +469,7 @@ The principal problem above is that information that is present in the
 constraints is lost, which would force us to rely on a `suchThat` approach to
 generation - which will become very slow as constraint systems grow.
 
-### Using Match to introduce new variables for subcomponents
+### Using `match` to introduce new variables for subcomponents
 
 A solution to the total definition requirement is to *introduce more variables*.
 We can rewrite the problematic `fst p <. snd p` example below as:
@@ -492,8 +495,8 @@ constraints - these need to be bound somewhere - and (2) the order of
 `fst_ p = x` is important, `p` depends on `x`,  and not the other way
 around.
 
-To do both of these things at the same time we use the `match`  construct
-to the language:
+To do both of these things at the same time we use the `match` construct to the
+language:
 
 ```
 match :: Term (a,b) -> (Term a -> Term b -> Pred) -> Pred
@@ -518,9 +521,8 @@ match p $ \ x y -> x <. y
 
 In previous sections we provided some types for several of the library functions: `constrained`, `match`,
 
-
-```
-constrained:: HasSpec a => (Term a -> Pred) -> Specification a
+```haskell
+constrained :: HasSpec a => (Term a -> Pred) -> Specification a
 
 match :: (HasSpec a, HasSpec b) =>
          Term (a,b) -> (Term a -> Term b -> Pred) -> Pred
@@ -529,14 +531,14 @@ match :: (HasSpec a, HasSpec b) =>
 It turns out, that these functions would be much more useful with more general types. This also applies to some other
 library functions (`reify`, `caseOn`, etc.) we have not yet introduced. The general type of `constrained` is:
 
-```
-constrained:: (IsPred p, HasSpec a) => (Term a -> p) -> Specification a
+```haskell
+constrained :: (IsPred p, HasSpec a) => (Term a -> p) -> Specification a
 ```
 
 This general type allows the function passed to `constrained` to be any function, that given a Term, returns any type that acts like a `Pred`.
 The class IsPred is defined as follows, and has 4 instances.
 
-```
+```haskell
 class Show p => IsPred p where
   toPred :: p -> Pred
 
@@ -548,14 +550,14 @@ instance IsPred Pred
 
 Thus the following would be type-correct calls to constrained.
 
-```
+```haskell
 ex1 :: Specification Int
 ex1 = constrained $ \ x -> True
 -- Any Haskell Boolean value
 
 ex2 :: Specification Int
 ex2 = constrained $ \ x -> x ==. lit 3
--- Any Haskell term, with type (Term Bool)
+-- Any Haskell term, with type Term Bool
 
 ex3 :: Specification Int
 ex3 = constrained $ \ x -> [ x <=. lit 2, x >=. lit 5 ]
@@ -566,24 +568,30 @@ ex4 = constrained $ \ x -> assert $ x == lit 9
 -- Anything with type Pred
 ```
 
-The type of `match` is also overloaded. It supports writing specifications over type with sub-components, allowing
-each sub-component to be individually constrained.
+The type of `match` is similarly overloaded. It supports writing specifications
+over type with sub-components, allowing each sub-component to be individually
+constrained.
 
 The `match` library function is used to introduce new `Term` variables for the sub-components of another type.
 If `t` has type `T`, and `T` has 3 sub-components, then the `match` function would take a Haskell
 lambda expression with three parameters. `(match t $ \ x y z -> ...)`. Its overloaded type is:
 
-```
-match
-  :: (HasSpec a, IsProductType a, IsPred p) =>
-     Term a -> FunTy (MapList Term (ProductAsList a)) p -> Pred
+``` haskell
+match :: ( HasSpec a
+         , IsProductType a
+         , IsPred p
+         ) => Term a
+           -> FunTy (MapList Term (ProductAsList a)) p
+           -> Pred
 ```
 
-The meaning of this is a bit hard to parse: `IsProductType a`. It means the type `a` is isomorphic to a product type.
-I.e. isomorphic to  `(t1,t2, ..., tn)` So all tuples would work. So would any type whose constructor had
-one or more arguments, So would any type whose HasSpec instance was derived via the GHC.Generics instance.
-So in summary, if the type `a`  has **n** distinct parts, then the constraint (`IsProductType a`) is met,
-and the interpretation of the `FunTy` is a function with **n** parameters.
+The meaning of this is a bit hard to parse: `IsProductType a`. It means the
+type `a` is isomorphic to a product type. I.e. isomorphic to  `(t1,t2, ..., tn)`
+So all tuples would work. So would any type with a single constructor of
+one or more arguments whose HasSimpleRep instance was derived via the
+GHC.Generics instance. So in summary, if the type `a`  has **n** distinct
+parts, then the constraint (`IsProductType a`) is met, and the interpretation
+of the `FunTy` is a function with **n** parameters.
 
 ```
 type FunTy (MapList Term (ProductAsList a)) p = t1 -> t2 -> ... -> tn -> p
@@ -596,7 +604,7 @@ type FunTy (MapList Term (ProductAsList a)) p = t1 -> t2 -> ... -> tn -> p
 
 `assert` lifts a `(Term Bool)` to a `Pred`.  by using the `IsPred` class, we can often get around using it, but it becomes necessary when we want to use the `And` operator, and the operands of `And` are a mix of `Pred`, `(Term Bool), and other operations. Here is a very simple use. Further examples illustrate its use in more challenging contexts.
 
-```
+```haskell
 ex5 :: Specification [Int]
 ex5 = constrained $ \ xs -> assert $ elem_ 7 xs
 ```
@@ -609,7 +617,7 @@ Note that `elem_` is the function symbol corresponding to `Data.List.elem`.
 The library function `forAll` is used to impose a constraint on every element of a container type. There are
 three `Forallable` instances in the Base system.
 
-```
+```haskell
 class Forallable t e | t -> e where
 instance Ord k => Forallable (Map k v) (k, v)
 instance Ord a => Forallable (Set a) a
@@ -618,7 +626,7 @@ instance Forallable [a] a
 
 Here is an example of its use.
 
-```
+```haskell
 ex6 :: Specification [Int]
 ex6 = constrained $ \ xs ->
       forAll xs $ \ x -> [ x <=. 10, x >. 1]
@@ -664,7 +672,7 @@ The first use: `(reifies b a f)`,  says a term `b` can be obtained from a term `
 Here is an example of its use. Internally, it works by forcing the solution of `a` before solving for `b`, applying the `f` to
 the solution for `a`, and then constructing a `(Term b)` obtained from this value.
 
-```
+```haskell
 ex7 :: Specification (Int,[Int])
 ex7 = constrained $ \ pair ->
       match pair $ \ n xs ->
@@ -688,7 +696,7 @@ True
 The second operation `reify` can be defined using `reifies` by placing an existential constraint on the range of the function.
 Here is an example of the use of `reify`
 
-```
+```haskell
 ex8 :: Specification ([Int],[Int])
 ex8 = constrained $ \ pair ->
       match pair $ \ xs1 xs2 ->
@@ -718,7 +726,7 @@ True
 The third operation `assertReified` can be used to place a boolean constraint on the existential.
 Here is an example of its use.
 
-```
+```haskell
 ex9 :: Specification Int
 ex9 = constrained $ \x ->
   [ assert $ x <=. 10
@@ -751,7 +759,7 @@ Sometimes we want to choose between several different specifications for the sam
 Let's look at the first. Multiple constuctors from the same type. This uses the `caseOn` library functions and its two
 helper functions `branch` (where each constructor is choosen equally) and `branchW` (where we can give weights, to determine the frequency each constructor is choosen). The type of `caseOn`
 
-```
+```haskell
 caseOn
   :: Term a
      -> FunTy
@@ -766,7 +774,7 @@ unweighted using `(branch ...)`, where the `...` is a function with *m* paramete
 subcomponents of that constructor). First we introduce a sum of products type `Three` and use the GHC.Generics
 instance to derive the HasSpec instance.
 
-```
+```haskell
 data Three = One Int | Two Bool | Three Int deriving (Ord, Eq, Show, Generic)
 instance HasSimpleRep Three
 instance HasSpec Three
@@ -774,7 +782,7 @@ instance HasSpec Three
 
 Here is an example using the mechanism with no weights (`branch`), where every branch is equilikely.
 
-```
+```haskell
 ex10 :: Specification Three
 ex10 = constrained $ \ three ->
        caseOn three
@@ -788,7 +796,7 @@ expects the branches to be in the same order the constructors are introduced in 
 
 Here is another example using the weighted mechanism (`branchW`).
 
-```
+```haskell
 ex11 :: Specification Three
 ex11 = constrained $ \ three ->
        caseOn three
@@ -805,13 +813,13 @@ The second way to specify disjunctions is to choose `chooseSpec`, where the two 
 type, but are distinguished logically by the two input specifications. The type of
 `chooseSpec` is as follows, where the `Int` determines the frequency of each choice.
 
-```
-chooseSpec:: HasSpec a => (Int, Specification a) -> (Int, Specification a) -> Specification a
+```haskell
+chooseSpec :: HasSpec a => (Int, Specification a) -> (Int, Specification a) -> Specification a
 ```
 
 Here is an example.
 
-```
+```haskell
 ex12 :: Specification (Int,[Int])
 ex12 = chooseSpec
          (5, constrained $ \ pair ->
@@ -852,7 +860,7 @@ defined interms of the un-primed function and `match`, and the second defined nt
 
 The primed version of `forAll` is `forAll'`
 
-```
+```haskell
 ex13a :: Specification [(Int,Int)]
 ex13a = constrained $ \ xs ->
       forAll xs $ \ x -> match x $ \ a b -> a ==. negate b
@@ -864,7 +872,7 @@ ex13b = constrained $ \ xs ->
 
 The primed version of `constrained` is `constrained'`
 
-```
+```haskell
 ex14a :: Specification (Int,Int,Int)
 ex14a = constrained $ \ triple ->
         match triple $ \ a b c -> [ b ==. a + lit 1, c ==. b + lit 1]
@@ -876,7 +884,7 @@ ex14b = constrained' $ \ a b c -> [ b ==. a + lit 1, c ==. b + lit 1]
 The primed version of `reify` is `reify'`
 
 
-```
+```haskell
 ex15a :: Specification (Int,Int,Int)
 ex15a = constrained $ \ triple ->
           match triple $ \ x1 x2 x3 ->
@@ -899,7 +907,7 @@ In Haskell we can define data types with multiple constructors, and constructors
 The library functions `onCon`, `sel`, and `isJust`, allow us to constrain such types in a way less verbose
 than using the `caseOn` library function. Consider the following
 
-```
+```haskell
 ex16 :: Specification Three
 ex16 = constrained $ \ three ->
        caseOn three
@@ -916,7 +924,7 @@ This requires that the GHC language directive`{-# LANGUAGE DataKinds #-}` be in 
 Then apply it to a Term with the type returned by that constructor, followed by a Haskell function with one parameter
 for each subcomponent of that constructor, that returns a Pred. Here is `ex16` redone using three `onCon` predicates.
 
-```
+```haskell
 ex17:: Specification Three
 ex17 = constrained $ \ three ->
     [ onCon @"One" three (\ x -> x==. lit 1)
@@ -929,21 +937,21 @@ The real power of `onCon` is when you only want to constrain one (or a subset) o
 and the other constructors remain unconstrained. Here we only constrain the constructor `Three` and the constructors
 `One` and `Two` remain unconstrained.
 
-```
+```haskell
 ex18:: Specification Three
 ex18 = constrained $ \ three ->
        onCon @"Three" three ( \ x -> x==. lit 3)
 ```
 
 Here is another example where we only constrain the constructor `Just` of the maybe type.
-```
+```haskell
 ex19 :: Specification (Maybe Bool)
 ex19 = constrained $ \ mb -> onCon @"Just" mb (\ x -> x==. lit False)
 ```
 
 Haskell allows the definition of data types with named selectors. Here is an example.
 
-```
+```haskell
 data Dimensions
   where Dimensions ::
           { length :: Int
@@ -956,7 +964,7 @@ instance HasSpec Dimensions
 
 This introduces Haskell functions with types
 
-```
+```haskell
 length :: Dimensions -> Int
 width :: Dimensions -> Int
 depth :: Dimensions -> Int
@@ -967,14 +975,14 @@ instances, the we can use the `sel` library function to create lifted versions o
 the Haskell selector functions like this. Nothe that the lifted `width` uses the trailing
 under score convention: `width_` because it manipulates `Term`s not values.
 
-```
+```haskell
 width_ :: Term Dimensions -> Term Int
 width_ d = sel @1 d
 ```
 
 This requires the `DataKinds` directive, and importing `GHC.Generics` and `GHC.TypeLits` to work.
 
-```
+```haskell
 {-# LANGUAGE DataKinds #-}
 import GHC.Generics
 import GHC.TypeLits
@@ -984,7 +992,7 @@ When we type-apply the library function `sel` to a type-level `Natural` number l
 selects the `ith` selector function. The selectors are numbered from `0` to `n-1` . Selection
 can always be expressed using `match` like this:
 
-```
+```haskell
 ex20a :: Specification Dimensions
 ex20a = constrained $ \ d ->
         match d $ \ l w d -> [ l >. lit 10, w ==. lit 5, d <. lit 20]
@@ -992,7 +1000,7 @@ ex20a = constrained $ \ d ->
 
 which can be reexpressed using `sel` as this.
 
-```
+```haskell
 ex20b :: Specification Dimensions
 ex20b = constrained $ \ d ->
         [sel @0 d >. lit 10
@@ -1003,14 +1011,14 @@ ex20b = constrained $ \ d ->
 When we wish to constrain just a subset of the subcomponents, selectors make it possible
 to write more concise `Specification`s.
 
-```
+```haskell
 ex21 :: Specification Dimensions
 ex21 = constrained $ \ d -> width_ d ==. lit 1
 ```
 
 
 ## Naming introduced lambda bound Term variables
-1.  [var|name|]
+1.  `[var|name|]`
 
 When we use a library function that introduces new Term variable using a Haskell lambda expression, the system
 gives the Haskell variable a unique Term level name such as `v0` or `v1`  or `v2` etc. When the specification is
@@ -1019,7 +1027,7 @@ Term level names that were assigned to the Haskell variables. This means the err
 understand. For example consider the over constrained specification. It is over constrained because
 `left` cannot be simultaneously equal to `right` and `right + lit 1`
 
-```
+```haskell
 ex22a :: Specification (Int,Int)
 ex22a = constrained $ \ pair ->
        match pair $ \ left right ->
@@ -1042,14 +1050,14 @@ Note the error message is in terms of the internal Term name `v1`. Which is not 
 
 To make error messages clearer we can name Haskell lambda bound variables using `[var|left|]` instead of just `left`.  In order to do this we must have the following directives in our file.
 
-```
+```haskell
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ViewPatterns #-}
 ```
 
 Here is the same example using this naming schema.
 
-```
+```haskell
 ex22b :: Specification (Int,Int)
 ex22b = constrained $ \ [var|pair|] ->
          match pair $ \ [var|left|] [var|right|] -> [ left ==. right, left ==. right + lit 1]
@@ -1069,36 +1077,32 @@ Original spec ErrorSpec
 
 
 ## Existential quantifiers
-1.  `exists`
-2.  `unsafeExists`
+1. `exists`
+2. `unsafeExists`
 
+Sometimes we want to constrain a variable, in terms of another internal or
+hidden variable.  A classic example is constraining a number to be odd.  A
+number `x` is odd, if there exists a number `y` such that  `x == y + y + 1`:
 
-Sometimes we want to constrain a variable, in terms of another internal or hidden variable.
-A classic example is constraining a number to be odd.  A number `x` is odd, if there exists
-another internal number `y`, such that, `x` is equal to `y + y + 1`
-
-
-Here is an example.
-
-```
+```haskell
 ex22 :: Specification Int
 ex22 = constrained $ \ [var|oddx|] ->
          unsafeExists
          (\ [var|y|] -> [Assert $ oddx ==. y + y + 1])
 ```
 
-Why do we call the library function `unsafeExists`? It is unsafe because the library function
-`conformsToSpec` will fail to return `True` when called on a generated result. Why?
-Because the system does not know how to find the internal, hidden variable. To solve this
-the safe function `exists` takes two Haskell lambda expressions.  The first is a function
-that tells how to compute the hidden variable from the values returned by solving the constraints.
-The second is the normal use of a Haskell lambda expression to introduce a Term variable
-naming the hidden variable. Here is an example.
+Why do we call the library function `unsafeExists`? It is unsafe because the
+library function `conformsToSpec` will fail to return `True` when called on a
+generated result. Why?  Because the system does not know how to find the
+hidden variable `y`. To solve this the safe function `exists` takes two
+Haskell lambda expressions. The first is a function that tells how to compute
+the hidden variable from the values returned by solving the constraints. The
+second is the normal use of a Haskell lambda expression to introduce a Term
+variable naming the hidden variable:
 
-```
+```haskell
 ex23 :: Specification Int
-ex23 = ExplainSpec ["odd via (y+y+1)"] $
-       constrained $ \ [var|oddx|] ->
+ex23 = constrained $ \ [var|oddx|] ->
          exists
 		   -- first lambda, how to compute the hidden value for 'y'
            (\eval -> pure (div (eval oddx - 1) 2))
@@ -1107,19 +1111,21 @@ ex23 = ExplainSpec ["odd via (y+y+1)"] $
            (\ [var|y|] -> [Assert $ oddx ==. y + y + 1])
 ```
 
-One might ask what is the role of the parameter `eval` in the first lambda expression passed to `exists`.
-Recall that we are trying assist the function `conformsToSpec` in determining if a completely known value
-conforms to the specification. In this context, every Term variable is known. But in the specification we
-only have variables with type `(Term a)`,  what we need are variables with type `a`. The `eval` functional parameter
-has type
+One might ask what is the role of the parameter `eval` in the first lambda
+expression passed to `exists`. Recall that we are trying assist the function
+`conformsToSpec` in determining if a _completely known_ value conforms to the
+specification. In this context, every Term variable bound before this point is
+known. But in the specification we only have variables with type `(Term a)`,
+what we need are variables with type `a`. The `eval` functional parameter has
+type:
 
 ```
 eval :: Term a -> a
 ```
 
-This, lets us access those values. In the example the Term variable `(oddx :: Term Int)` is in scope, so
+This lets us access those values. In the example the Term variable `(oddx :: Term Int)` is in scope, so
 `(eval oddx :: Int)`, and since this is only used when calling `conformsToSpec`, we actually have the
-value of the `oddx` for `eval` to return. Finally `(div (eval oddx - 1) 2))` tells us how to compute
+value of the `oddx` for `eval` to return. Finally `div (eval oddx - 1) 2` tells us how to compute
 the value of the hidden variable.
 
 
@@ -1131,7 +1137,7 @@ If one has a term `x` with type `(Term Bool)` one could use the value of this te
 define a Specification conditional on this term by using the `(caseOn x ...)` library function.
 There are two more concise library function one can use instead.
 
-```
+```haskell
 whenTrue :: IsPred p => Term Bool -> p -> Pred
 ifElse :: (IsPred p, IsPred q) => Term Bool -> p -> q -> Pred
 ```
@@ -1139,7 +1145,7 @@ ifElse :: (IsPred p, IsPred q) => Term Bool -> p -> q -> Pred
 For example consider the data type `Rectangle` where the selector `square` indicates
 that the rectangle has equal length width and length.
 
-```
+```haskell
 data Rectangle = Rectangle { wid :: Int, len :: Int, square :: Bool}
     deriving (Show, Eq,Generic)
 instance HasSimpleRep Rectangle
@@ -1148,7 +1154,7 @@ instance HasSpec Rectangle
 
 We can enforce this in a specification as follows.
 
-```
+```haskell
 ex26 :: Specification Rectangle
 ex26 = constrained' $ \ wid len square ->
  [ assert $ wid >=. lit 0
@@ -1161,7 +1167,7 @@ Note that there are no constraints relating `wid` and `len` if the selector `squ
 The library function `ifElse` allows two separate sets of constraints, one when the
 `square` is `True` and a completely separate set when `square` is `False`
 
-```
+```haskell
 ex27 :: Specification Rectangle
 ex27 = constrained' $ \ wid len square ->
   ifElse square
@@ -1178,7 +1184,7 @@ ex27 = constrained' $ \ wid len square ->
 Explanations allow the writer of a specification to add textual message, that can be used
 if solving a specification fails. These library functions have type
 
-```
+```haskell
 explanation   :: NonEmpty String -> Pred -> Pred
 assertExplain :: IsPred p => NonEmpty String -> p -> Pred
 ExplainSpec   :: [String] -> Specification a -> Specification a
@@ -1186,7 +1192,7 @@ ExplainSpec   :: [String] -> Specification a -> Specification a
 
 Here is a specification with no explanations
 
-```
+```haskell
 ex28a :: Specification (Set Int)
 ex28a = constrained $ \ s ->
        [ assert $ member_ (lit 5) s
@@ -1205,7 +1211,7 @@ While combining 2 SetSpecs
 
 By adding an `ExplainSpec` like this
 
-```
+```haskell
 ex28b :: Specification (Set Int)
 ex28b = ExplainSpec ["5 must be in the set"] $
         constrained $ \ s ->
@@ -1226,7 +1232,7 @@ While combining 2 SetSpecs
   (SetSpec must=[ 5 ] elem=TrueSpec @(Int) size=TrueSpec @(Integer))
 ```
 
-```
+```haskell
 ex28c :: Specification (Set Int)
 ex28c =
         constrained $ \ s -> explanation (pure "5 must be in the set")
@@ -1253,7 +1259,7 @@ There are a number of library functions that create specifications directly
 and do not use the `constrained` library function. These are particulary useful
 in conjunction with the library function `satisfies` which converts a `Specification` into a `Pred`
 
-```
+```haskell
 satisfies :: HasSpec a => Term a -> Specification a -> Pred
 equalSpec :: a -> Specification a
 notEqualSpec :: HasSpec a => a -> Specification a
@@ -1267,7 +1273,7 @@ cardinality :: (Number Integer, HasSpec a) => Specification a -> Specification I
 
 Here is an example of the use of `satisfies` in conjunction with `notMemberSpec`
 
-```
+```haskell
 ex29 :: Specification Int
 ex29 = constrained $ \ x ->
        [ assert $ x >=. lit 0
@@ -1288,7 +1294,7 @@ In essence this spec says `x` is either  `0`, `1`, `4`, or `5`, where
 
 These functions are generally useful when writing and debugging specifications.
 
-```
+```haskell
 -- | Simplify a Term
 simplifyTerm :: Term a -> Term a
 
@@ -1320,7 +1326,7 @@ debugSpec :: HasSpec a => Specification a -> IO ()
 
 The function `forAllSpec` allows one to turn a  `Specification` into a QuickCheck  `Property`
 
-```
+```haskell
 forAllSpec ::
   (HasSpec a, QuickCheck.Testable p) =>
   Specification a -> (a -> p) -> QuickCheck.Property
@@ -1329,7 +1335,7 @@ forAllSpec ::
 The librrary function `monitor` allows specification writers to access some of the QuickCheck property
 modifiers,  like  `classify`,  `label`,  and  `cover`,  by turning  them into a  `Pred` using `monitor`
 
-```
+```haskell
 monitor
   :: ((forall a. Term a -> a) -> QuickCheck.Property -> QuickCheck.Property)
      -> Pred
@@ -1338,7 +1344,7 @@ monitor
 The monitor `Pred` has no effect,  unless the  `Specification` that embeds the `monitor` call,  is lifted
 to a  `Property` using  `forAllSpec.  Here is a example.
 
-```
+```haskell
 ex30 :: Specification (Int, Int)
 ex30 = constrained $ \ [var|p|] ->
   match p $ \ [var|x|] [var|y|] ->
@@ -1372,7 +1378,7 @@ True
 
 The second example uses `forAllSpec` to create a `Property`,  that passes as long as the generator does not fail.
 
-```
+```haskell
 prop31 :: QuickCheck.Property
 prop31 = forAllSpec ex30 $ \_ -> True
 ```
@@ -1396,7 +1402,7 @@ We modify it by adding a `monitor` predicate. The purpose of this example is two
 1.  Illustrate the use of `monitor`
 2.  Demonstrate that the weighted `caseOn` changes the frequency at which the branches are choosen.
 
-```
+```haskell
 ex11m :: Specification Three
 ex11m = constrained $ \ three ->
        [ caseOn three
@@ -1448,7 +1454,7 @@ to build a skeleton `Specification` that does nothing more than just bring into 
 (possibly nested) subcomponent.  We build a deeply nested example by building on top of the types from
 previous examples `Three` and  `Rectangle`.    We introduce a new deeply nested type `Nested`
 
-```
+```haskell
 data Nested = Nested Three Rectangle [Int]
   deriving (Show,Eq,Generic)
 instance HasSimpleRep Nested
@@ -1464,7 +1470,7 @@ this stage  is to just introduce a variable for each subcomponent. So we use `Tr
 no constraints on each of these subcomponents. We use named variables, and use a comment to label each `branch`
 with the name of the construtor.
 
-```
+```haskell
 skeleton :: Specification Nested
 skeleton = constrained $ \ [var|nest|] ->
            match nest $ \ [var|three|] [var|rect|] [var|line|] ->
@@ -1477,10 +1483,11 @@ skeleton = constrained $ \ [var|nest|] ->
               ]
 ```
 
-Once we have the `skeleton` compiling, we can replace each `TruePred` with some constraints.
-In this stage, we worry just about the constraints,  and which `Pred` to use, and not about how we bring
-a variable into scope for each subcomponent.  Experience show that we have way fewer compiler
-errors, using this one step at a time strategy.
+Once we have the `skeleton` compiling, we can replace each `TruePred` with some
+constraints.  In this stage, we worry just about the constraints,  and which
+`Pred` to use, and not about how we bring a variable into scope for each
+subcomponent.  Experience show that we have way fewer compiler errors, using
+this one step at a time strategy.
 
 # Writing HasSpec instances by hand.
 
@@ -1527,7 +1534,7 @@ so do not forget to put the deriving clause `deriving (Generic,Eq,Show)` in the 
 This strategy depends on the provided `(SimpleRep T)` associated type family instance, being an actual Sum-of-Products type.
 This requires quite a bit of knowledge about the internals of the system. Let's look closely at the `SimpleRep` class
 
-```
+```haskell
 class Typeable (SimpleRep a) => HasSimpleRep a where
   type SimpleRep :: * -> *
   type family SimpleRep a
@@ -1545,7 +1552,7 @@ Often the -builder- function is implemented as a Haskell Pattern.  Here is an ex
 A lot of complicated stuff is not fully describe here, but the example gives an overview of how it works.
 
 
-```
+```haskell
 -- NOTE: this is a representation of the `ShelleyTxOut` type. You can't
 -- simply use the generics to derive the `SimpleRep` for `ShelleyTxOut`
 -- because the type is memoized (i.e. it stores a hidden copy of the actual bytes that
@@ -1575,7 +1582,7 @@ that is not explained.
 
 The type `Coin` is a defined as
 
-```
+```haskell
 newtype Coin = Coin {unCoin :: Integer}
 ```
 The operations on Coin ensure the invariant that one cannot build a `Coin` with a negative value.
@@ -1583,7 +1590,7 @@ We can enforce these invariants in a `SimpleRep` instance by making the `SimpleR
 `Natural` is one of the numeric types, and has its own `SimpleRep` instance, so it is a good choice.
 Here is the `SimpleRep` instance, and the `HasSpec` instance defined using that representation.
 
-```
+```haskell
 instance HasSimpleRep Coin where
   type SimpleRep Coin = Natural
   toSimpleRep (Coin i) = case integerToNatural i of
@@ -1605,7 +1612,7 @@ naturalToCoin = Coin . fromIntegral
 To write a `Specification` for `Coin` we simply `match` against it, and then use the operations on the underlying
 type `Word64` to constraint it.
 
-```
+```haskell
 ex34 :: Specification Coin
 ex34 = constrained $ \coin ->
   match coin $ \ nat -> [nat  >=. lit 100, nat <=. lit 200]
@@ -1627,7 +1634,7 @@ Coin {unCoin = 119}
 
 The `HasSpec` class has an associated type family and many methods. Here is a summary of some of it.
 
-```
+```haskell
 class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => HasSpec a where
   -- | The `TypeSpec a` is the type-specific `Specification a`.
   type TypeSpec a
