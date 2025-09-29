@@ -5,52 +5,6 @@ The markdown source of this file can be obtained
 and all the examples in this file can be found
 [here](https://github.com/input-output-hk/constrained-generators/blob/master/examples/Constrained/Examples/ManualExamples.hs).
 
-<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
-**Table of Contents**
-
-- [Constrained Generators Manual](#constrained-generators-manual)
-    - [Constrained Generators is a First-Order Logic](#constrained-generators-is-a-first-order-logic)
-    - [Design Goals of the Library](#design-goals-of-the-library)
-    - [HasSpec instances](#hasspec-instances)
-    - [Building logic specifications using Haskell functions](#building-logic-specifications-using-haskell-functions)
-    - [Another example using conjunction and simple arithmetic](#another-example-using-conjunction-and-simple-arithmetic)
-    - [Function Symbols](#function-symbols)
-    - [Predefined HasSpec instances and their function symbols.](#predefined-hasspec-instances-and-their-function-symbols)
-        - [Function symbols for numeric types](#function-symbols-for-numeric-types)
-        - [` Function symbols for Bool`](#-function-symbols-for-bool)
-        - [Function symbols for List](#function-symbols-for-list)
-        - [Function symbols for Set](#function-symbols-for-set)
-        - [Function symbols for Map](#function-symbols-for-map)
-    - [Generating from and checking against specifications](#generating-from-and-checking-against-specifications)
-    - [How we solve the constraints](#how-we-solve-the-constraints)
-        - [How to pick the variable order](#how-to-pick-the-variable-order)
-        - [The total definition requirement ](#the-total-definition-requirement)
-        - [Using Match to introduce new variables for subcomponents](#using-match-to-introduce-new-variables-for-subcomponents)
-    - [Overloaded types in the library](#overloaded-types-in-the-library)
-- [Library functions to build Term, Pred, Specification](#library-functions-to-build-term-pred-specification)
-    - [From Term to Pred](#from-term-to-pred)
-    - [For all elements in a container type (List, Set, Map)](#for-all-elements-in-a-container-type-list-set-map)
-    - [Reification](#reification)
-    - [Disjunction, choosing between multiple things with the same type](#disjunction-choosing-between-multiple-things-with-the-same-type)
-    - [Primed library functions which are compositions with match](#primed-library-functions-which-are-compositions-with-match)
-    - [Constructors and Selectors](#constructors-and-selectors)
-    - [Naming introduced lambda bound Term variables](#naming-introduced-lambda-bound-term-variables)
-    - [Existential quantifiers](#existential-quantifiers)
-    - [Conditionals](#conditionals)
-    - [Explanations](#explanations)
-    - [Operations to define and use Specifications](#operations-to-define-and-use-specifications)
-    - [Utility functions](#utility-functions)
-    - [Escape Hatch to QuickCheck Gen monad](#escape-hatch-to-quickcheck-gen-monad)
-- [Strategy for constraining a large type with many nested sub-components.](#strategy-for-constraining-a-large-type-with-many-nested-sub-components)
-- [Writing HasSpec instances by hand.](#writing-hasspec-instances-by-hand)
-    - [Strategy 1 using GHC.Generics](#strategy-1-using-ghcgenerics)
-    - [Strategy 2 writing your own SimpleRep instance](#strategy-2-writing-your-own-simplerep-instance)
-    - [Strategy 3 defining the SimpleRep instance in terms of another type with a SimpleRep instance](#strategy-3-defining-the-simplerep-instance-in-terms-of-another-type-with-a-simplerep-instance)
-    - [Strategy 4, bypassing SimpleRep, and write the HasSpec instance by Hand](#strategy-4-bypassing-simplerep-and-write-the-hasspec-instance-by-hand)
-- [A look into the internals of the system.](#a-look-into-the-internals-of-the-system)
-
-<!-- markdown-toc end -->
-
 ## Constrained Generators is a First-Order Logic
 
 A First-order typed logic (FOTL) has 4 components, where each component uses types to ensure well-formedness.
@@ -1544,13 +1498,12 @@ class Typeable (SimpleRep a) => HasSimpleRep a where
 
 What kind of type lends itself to this strategy?
 1.  A type that has internal structure that enforces some internal invariants.
-2.  A type that has a -builder- function, that takes simple input, and constructs the internal struture.
-3.  A type that has an -accessor- function, that takes the internal structure, and returns the simple input.
-4.  A type where the -simple input- has a Sum-of-Products representation.
+2.  A type that has a _builder_ function, that takes simple input, and constructs the internal struture.
+3.  A type that has an _accessor_ function, that takes the internal structure, and returns the simple input.
+4.  A type where the _simple input_ has a Sum-of-Products representation.
 
-Often the -builder- function is implemented as a Haskell Pattern.  Here is an example that come from the Cardano Ledger.
+Often the _builder_ function is implemented as a Haskell Pattern.  Here is an example that come from the Cardano Ledger.
 A lot of complicated stuff is not fully describe here, but the example gives an overview of how it works.
-
 
 ```haskell
 -- NOTE: this is a representation of the `ShelleyTxOut` type. You can't
@@ -1575,8 +1528,8 @@ instance (Era era, Val (Value era)) => HasSimpleRep (ShelleyTxOut era) where
 instance (EraTxOut era, HasSpec (Value era)) => HasSpec (ShelleyTxOut era)
 ```
 
-TODO add more explanation about the types. Much of the example of depends on properties of TxOut
-that is not explained.
+<!-- TODO add more explanation about the types. Much of the example of depends
+on properties of TxOut that is not explained. -->
 
 ## Strategy 3 defining the SimpleRep instance in terms of another type with a SimpleRep instance
 
