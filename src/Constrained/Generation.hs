@@ -1317,8 +1317,6 @@ fromGESpec ge = case ge of
   GenError xs -> ErrorSpec (catMessageList xs)
   FatalError es -> error $ catMessages es
 
--- TODO: move this somewhere sensible
-
 -- | Functor like property for Specification, but instead of a Haskell function (a -> b),
 --   it takes a function symbol (t '[a] b) from a to b.
 --   Note, in this context, a function symbol is some constructor of a witnesstype.
