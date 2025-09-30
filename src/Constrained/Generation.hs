@@ -49,6 +49,9 @@ module Constrained.Generation (
   EqW (..),
   SumSpec (..),
   pattern SumSpec,
+
+  mapSpec,
+  forwardPropagateSpec,
 ) where
 
 import Constrained.AbstractSyntax
@@ -833,17 +836,7 @@ mergeSolverStage (SolverStage x ps spec relevant) plan =
         normalizeSolverStage $ SolverStage
             y
             (ps ++ ps')
-            ( addToErrorSpec
-                ( NE.fromList
-                    ( [ "Solving var " ++ show x ++ " fails."
-                      , "Merging the Specs"
-                      , "   1. " ++ show spec
-                      , "   2. " ++ show spec'
-                      ]
-                    )
-                )
-                (spec <> spec')
-            )
+            (spec <> spec')
             (relevant <> relevant')
       Nothing -> stage
   | stage@(SolverStage y ps' spec' relevant') <- plan
@@ -897,27 +890,21 @@ backPropagation relevant (SolverPlan initplan) = SolverPlan (go [] (reverse init
     go acc [] = acc
     go acc (s@(SolverStage (x :: Var a) ps spec _) : plan) = go (s : acc) plan'
       where
-        newStages = concatMap (newStage spec) ps
+        newStages = concatMap newStage ps
         plan' = foldr mergeSolverStage plan newStages
-        -- Note use of the Term Pattern Equal
-        newStage specl (Assert (Equal (V x') t)) =
-          termVarEqCases specl x' t
-        newStage specr (Assert (Equal t (V x'))) =
-          termVarEqCases specr x' t
-        newStage _ _ = []
 
-        termVarEqCases :: HasSpec b => Specification a -> Var b -> Term b -> [SolverStage]
-        termVarEqCases (MemberSpec vs) x' t
-          | Set.singleton (Name x) == freeVarSet t =
-              [SolverStage x' [] (MemberSpec (NE.nub (fmap (\v -> errorGE $ runTerm (Env.singleton x v) t) vs)))
-               (Set.insert (Name x') relevant)]
-        termVarEqCases specx x' t
-          | Just Refl <- eqVar x x'
-          , [Name y] <- Set.toList $ freeVarSet t
-          , Result ctx <- toCtx y t =
-              [SolverStage y [] (propagateSpec specx ctx)
-               (Set.insert (Name x') relevant)]
-        termVarEqCases _ _ _ = []
+        -- Note use of the Term Pattern Equal
+        newStage (Assert (Equal tl tr))
+          | [Name xl] <- Set.toList $ freeVarSet tl
+          , [Name xr] <- Set.toList $ freeVarSet tr
+          , Name x `elem` [Name xl, Name xr]
+          , Result ctxL <- toCtx xl tl
+          , Result ctxR <- toCtx xr tr
+          = case (eqVar x xl, eqVar x xr) of
+              (Just Refl, _) -> [SolverStage xr [] (propagateSpec (forwardPropagateSpec spec ctxL) ctxR) (Set.insert (Name x) relevant)]
+              (_, Just Refl) -> [SolverStage xl [] (propagateSpec (forwardPropagateSpec spec ctxR) ctxL) (Set.insert (Name x) relevant)]
+              _ -> error "The impossible happened"
+        newStage _ = []
 
 -- | Function symbols for `(==.)`
 data EqW :: [Type] -> Type -> Type where
@@ -1329,3 +1316,32 @@ fromGESpec ge = case ge of
   Result s -> s
   GenError xs -> ErrorSpec (catMessageList xs)
   FatalError es -> error $ catMessages es
+
+-- | Functor like property for Specification, but instead of a Haskell function (a -> b),
+--   it takes a function symbol (t '[a] b) from a to b.
+--   Note, in this context, a function symbol is some constructor of a witnesstype.
+--   Eg. ProdFstW, InjRightW, SingletonW, etc. NOT the lifted versions like fst_ singleton_,
+--   which construct Terms. We had to wait until here to define this because it
+--   depends on Semigroup property of Specification, and Asserting equality
+mapSpec ::
+  forall t a b.
+  AppRequires t '[a] b =>
+  t '[a] b ->
+  Specification a ->
+  Specification b
+mapSpec f (ExplainSpec es s) = explainSpec es (mapSpec f s)
+mapSpec f TrueSpec = mapTypeSpec f (emptySpec @a)
+mapSpec _ (ErrorSpec err) = ErrorSpec err
+mapSpec f (MemberSpec as) = MemberSpec $ NE.nub $ fmap (semantics f) as
+mapSpec f (SuspendedSpec x p) =
+  constrained $ \x' ->
+    Exists (\_ -> fatalError "mapSpec") (x :-> fold [Assert $ (x' ==. appTerm f (V x)), p])
+mapSpec f (TypeSpec ts cant) = mapTypeSpec f ts <> notMemberSpec (map (semantics f) cant)
+
+-- TODO generalizeme!
+forwardPropagateSpec :: HasSpec a => Specification a -> Ctx a b -> Specification b
+forwardPropagateSpec s CtxHOLE = s
+forwardPropagateSpec s (CtxApp f (c :? Nil))
+  | Evidence <- ctxHasSpec c = mapSpec f (forwardPropagateSpec s c)
+forwardPropagateSpec _ _ = TrueSpec
+

@@ -59,6 +59,8 @@ testAll = hspec $ tests False
 tests :: Bool -> Spec
 tests nightly =
   describe "constrained" . modifyMaxSuccess (\ms -> if nightly then ms * 10 else ms) $ do
+    testSpec "complicatedEither" complicatedEither
+    testSpec "pairCant" pairCant
     -- TODO: figure out why this doesn't shrink
     testSpecNoShrink "reifiesMultiple" reifiesMultiple
     testSpec "assertReal" assertReal
