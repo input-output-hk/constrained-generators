@@ -656,7 +656,7 @@ cardinalNumSpec (NumSpecInterval Nothing Nothing) = cardinalTrueSpec @n
 -- Now the operations on Numbers
 
 -- | Everything we need to make the number operations make sense on a given type
-class (Num a, HasSpec a, HasDivision a) => NumLike a where
+class (Num a, HasSpec a, HasDivision a, OrdLike a) => NumLike a where
   subtractSpec :: a -> TypeSpec a -> Specification a
   default subtractSpec ::
     ( NumLike (SimpleRep a)
@@ -684,11 +684,20 @@ class (Num a, HasSpec a, HasDivision a) => NumLike a where
     Maybe a
   safeSubtract a b = fromSimpleRep <$> safeSubtract @(SimpleRep a) (toSimpleRep a) (toSimpleRep b)
 
--- | Operations on numbers
+-- | Operations on numbers.
+-- The reason there is no implementation of abs here is that you can't easily deal with abs
+-- without specifications becoming very large. Consider the following example:
+-- > constrained $ \ x -> [1000 <. abs_ x, abs_ x <. 1050]
+-- The natural `Specification` here would be something like `(-1050, -1000) || (1000, 1050)`
+-- - the disjoint union of two open, non-overlapping, intervals. However, this doesn't work
+-- because number type-specs only support a single interval. You could fudge it in all sorts of ways
+-- by using `chooseSpec` or by using the can't set (which would blow up to be 2000 elements large in this
+-- case). In short, there is no _satisfactory_ solution here.
 data IntW (as :: [Type]) b where
   AddW :: NumLike a => IntW '[a, a] a
   MultW :: NumLike a => IntW '[a, a] a
   NegateW :: NumLike a => IntW '[a] a
+  SignumW :: NumLike a => IntW '[a] a
 
 deriving instance Eq (IntW dom rng)
 
@@ -696,16 +705,19 @@ instance Show (IntW d r) where
   show AddW = "+"
   show NegateW = "negate_"
   show MultW = "*"
+  show SignumW = "signum_"
 
 instance Semantics IntW where
   semantics AddW = (+)
   semantics NegateW = negate
   semantics MultW = (*)
+  semantics SignumW = signum
 
 instance Syntax IntW where
   isInfix AddW = True
   isInfix NegateW = False
   isInfix MultW = True
+  isInfix SignumW = False
 
 class HasDivision a where
   doDivide :: a -> a -> a
@@ -860,8 +872,8 @@ instance NumLike a => Num (Term a) where
   negate = negate_
   fromInteger = Lit . fromInteger
   (*) = (*.)
-  abs = error "abs not implemented for Term Fn Int"
-  signum = error "signum not implemented for Term Fn Int"
+  signum = signum_
+  abs = error "No implementation for abs @(Term a)"
 
 invertMult :: (HasSpec a, Num a, HasDivision a) => a -> a -> Maybe a
 invertMult a b =
@@ -879,6 +891,12 @@ instance Logic IntW where
     | otherwise = ErrorSpec $ NE.fromList [ "zero" ]
   propagateTypeSpec MultW (HOLE :<: i) ts cant = divideSpec i ts <> notMemberSpec (mapMaybe (flip invertMult i) cant)
   propagateTypeSpec MultW ctx ts cant = propagateTypeSpec MultW (flipCtx ctx) ts cant
+  propagateTypeSpec SignumW (Unary HOLE) ts cant =
+    constrained $ \ x ->
+      [ x `satisfies` notMemberSpec [0] | not $ ok 0 ] ++
+      [ Assert $ 0 <=. x                | not $ ok (-1) ] ++
+      [ Assert $ x <=. 0                | not $ ok 1 ]
+    where ok = flip conformsToSpec (TypeSpec ts cant)
 
   propagateMemberSpec AddW (HOLE :<: i) es =
     memberSpec
@@ -896,6 +914,12 @@ instance Logic IntW where
     | otherwise = ErrorSpec $ NE.fromList [ "zero" ]
   propagateMemberSpec MultW (HOLE :<: i) es = memberSpec (mapMaybe (flip invertMult i) (NE.toList es)) (NE.fromList ["propagateSpec"])
   propagateMemberSpec MultW ctx es = propagateMemberSpec MultW (flipCtx ctx) es
+  propagateMemberSpec SignumW (Unary HOLE) es
+    | all ((`notElem` [-1, 0, 1]) . signum) es = ErrorSpec $ NE.fromList [ "signum for invalid member spec", show es ]
+    | otherwise = constrained $ \ x ->
+                    [ x `satisfies` notMemberSpec [0] | 0  `notElem` es ] ++
+                    [ Assert $ 0 <=. x                | -1 `notElem` es ] ++
+                    [ Assert $ x <=. 0                | 1  `notElem` es ]
 
   rewriteRules AddW (x :> y :> Nil) _ | x == y = Just $ 2 * x
   rewriteRules _ _ _ = Nothing
@@ -915,6 +939,10 @@ infixl 7 *.
 -- | `Term`-level `negate`
 negate_ :: NumLike a => Term a -> Term a
 negate_ = appTerm NegateW
+
+-- | `Term`-level `signum`
+signum_ :: NumLike a => Term a -> Term a
+signum_ = appTerm SignumW
 
 infix 4 -.
 
