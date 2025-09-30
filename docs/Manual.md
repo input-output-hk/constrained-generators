@@ -362,7 +362,7 @@ like `(-∞,4)` for `y`, from which we can generate a value.
 At this point it should be relatively clear that the order we pick for the
 variables matters a great deal. If we choose to generate `y` before `x` in our
 example we will have no defining constraints for `y` and so we pick a value for
-it freely. But that may render `x` unsolvable if `y > 9` - which will result in
+it freely. But that renders `x` unsolvable if `y >= 9` - which will result in
 the generator failing to generate a value (one could consider backtracking, but
 that is very computationally expensive so _relying_ on it would not be wise).
 
