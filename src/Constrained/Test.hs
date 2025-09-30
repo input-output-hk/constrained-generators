@@ -398,11 +398,15 @@ instance QC.Arbitrary TestableFn where
       , TestableFn $ NegateW @Int
       , TestableFn $ MultW @Int
       , TestableFn $ MultW @Integer
+      , TestableFn $ SignumW @Integer
       -- These are representative of the bounded types
       , TestableFn $ MultW @Word8
+      , TestableFn $ SignumW @Word8
       , TestableFn $ MultW @Int8
       , TestableFn $ MultW @Float
+      , TestableFn $ SignumW @Float
       , TestableFn $ MultW @Double
+      , TestableFn $ SignumW @Double
       , TestableFn $ SizeOfW @(Map Int Int)
       , -- data BaseW
         TestableFn $ EqualW @Int
