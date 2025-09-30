@@ -59,21 +59,18 @@ testAll = hspec $ tests False
 tests :: Bool -> Spec
 tests nightly =
   describe "constrained" . modifyMaxSuccess (\ms -> if nightly then ms * 10 else ms) $ do
-    -- TODO: double-shrinking
+    -- TODO: figure out why this doesn't shrink
     testSpecNoShrink "reifiesMultiple" reifiesMultiple
     testSpec "assertReal" assertReal
     testSpecNoShrink "chooseBackwards" chooseBackwards
     testSpecNoShrink "chooseBackwards'" chooseBackwards'
-    -- TODO: turn this on again when QuickCheck version is bumped
-    -- testSpec "whenTrueExists" whenTrueExists
+    testSpec "whenTrueExists" whenTrueExists
     testSpec "assertRealMultiple" assertRealMultiple
-    -- TODO: quickcheck version
-    testSpecNoShrink "setSpec" setSpec
+    testSpec "setSpec" setSpec
     testSpec "leqPair" leqPair
     testSpec "setPair" setPair
     testSpecNoShrink "listEmpty" listEmpty
-    -- TODO: quickcheck version
-    testSpecNoShrink "compositionalSpec" compositionalSpec
+    testSpec "compositionalSpec" compositionalSpec
     testSpec "simplePairSpec" simplePairSpec
     testSpec "trickyCompositional" trickyCompositional
     testSpec "emptyListSpec" emptyListSpec
@@ -83,18 +80,19 @@ tests nightly =
     testSpec "fooSpec" fooSpec
     testSpec "mapElemSpec" mapElemSpec
     testSpec "mapElemKeySpec" mapElemKeySpec
-    -- TODO: double shrinking
+    -- TODO: figure out why this doesn't shrink
     testSpecNoShrink "mapIsJust" mapIsJust
     testSpecNoShrink "eitherKeys" eitherKeys
+    -- TODO: figure out why this doesn't shrink
     testSpecNoShrink "intSpec" intSpec
-    testSpecNoShrink "mapPairSpec" mapPairSpec
+    testSpec "mapPairSpec" mapPairSpec
+    -- TODO: figure out why this doesn't shrink
     testSpecNoShrink "mapEmptyDomainSpec" mapEmptyDomainSpec
     -- TODO: this _can_ be shrunk, but it's incredibly expensive to do
     -- so and it's not obvious if there is a faster way without implementing
     -- more detailed shrinking of `SuspendedSpec`s
     testSpecNoShrink "setPairSpec" setPairSpec
-    -- TODO: quickcheck version
-    testSpecNoShrink "fixedSetSpec" fixedSetSpec
+    testSpec "fixedSetSpec" fixedSetSpec
     testSpec "setOfPairLetSpec" setOfPairLetSpec
     testSpecNoShrink "emptyEitherSpec" emptyEitherSpec
     testSpecNoShrink "emptyEitherMemberSpec" emptyEitherMemberSpec
@@ -107,19 +105,19 @@ tests nightly =
     testSpec "maybeJustSetSpec" maybeJustSetSpec
     testSpec "weirdSetPairSpec" weirdSetPairSpec
     testSpec "knownDomainMap" knownDomainMap
-    -- TODO: figure out double-shrinking
+    -- TODO: figure out why this doesn't shrink
     testSpecNoShrink "testRewriteSpec" testRewriteSpec
     testSpec "parallelLet" parallelLet
     testSpec "letExists" letExists
     testSpec "letExistsLet" letExistsLet
     testSpec "notSubset" notSubset
     testSpec "unionSized" unionSized
-    -- TODO: figure out double-shrinking
+    -- TODO: figure out why this doesn't shrink
     testSpecNoShrink "dependencyWeirdness" dependencyWeirdness
     testSpec "foldTrueCases" foldTrueCases
     testSpec "foldSingleCase" foldSingleCase
     testSpec "listSumPair" (listSumPair @Int)
-    -- TODO: figure out double-shrinking
+    -- TODO: figure out why this doesn't shrink
     testSpecNoShrink "parallelLetPair" parallelLetPair
     testSpec "mapSizeConstrained" mapSizeConstrained
     testSpec "isAllZeroTree" isAllZeroTree
@@ -137,13 +135,12 @@ tests nightly =
     testSpec "sumRange" sumRange
     testSpec "sumListBad" sumListBad
     testSpec "listExistsUnfree" listExistsUnfree
-    -- TODO: turn this on when we bump quickcheck version
-    -- testSpec "listSumShort" listSumShort
+    testSpec "listSumShort" listSumShort
     testSpec "existsUnfree" existsUnfree
     testSpec "appendSize" appendSize
     testSpecNoShrink "appendSingleton" appendSingleton
     testSpec "singletonSubset" singletonSubset
-    -- TODO: double shrinking
+    -- TODO: figure out why this doesn't shrink
     testSpecNoShrink "reifyYucky" reifyYucky
     testSpec "fixedRange" fixedRange
     testSpec "rangeHint" rangeHint
@@ -470,6 +467,3 @@ foldWithSizeTests = do
     prop "something of size 2, can add to 0 in type with negative values." $
       testFoldSpec @Int (between 2 2) (between (-10) 10) (MemberSpec (pure 0)) Succeed
     prop "TEST listSum" $ prop_constrained_satisfies_sound (listSum @Int)
-
--- TODO Needs to sample like this: OR [pick t c | t <- total, c <- count]
--- prop "count =0, total is 0,1,2" $ testFoldSpec @Int (between 0 1) evenSpec (between 0 2) Succeed
