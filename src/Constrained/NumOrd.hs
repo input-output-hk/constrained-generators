@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DerivingVia #-}
@@ -257,9 +258,11 @@ instance (Arbitrary a, Ord a) => Arbitrary (NumSpec a) where
   shrink (NumSpecInterval m m') =
     uncurry NumSpecInterval <$> shrink (m, m')
 
+#if !MIN_VERSION_QuickCheck(2, 17, 0)
 instance Arbitrary Natural where
   arbitrary = wordToNatural . abs <$> arbitrary
   shrink n = [wordToNatural w | w <- shrink (naturalToWord n)]
+#endif
 
 instance Uniform Natural where
   uniformM g = wordToNatural . abs <$> uniformM g
