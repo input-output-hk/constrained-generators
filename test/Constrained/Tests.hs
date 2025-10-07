@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -59,6 +60,9 @@ testAll = hspec $ tests False
 tests :: Bool -> Spec
 tests nightly =
   describe "constrained" . modifyMaxSuccess (\ms -> if nightly then ms * 10 else ms) $ do
+    testSpec "setOfPairLetSpec" setOfPairLetSpec
+    testSpec "setPair" setPair
+    testSpec "mapElemSpec" mapElemSpec
     testSpec "complicatedEither" complicatedEither
     testSpec "pairCant" pairCant
     -- TODO: figure out why this doesn't shrink
@@ -70,7 +74,6 @@ tests nightly =
     testSpec "assertRealMultiple" assertRealMultiple
     testSpec "setSpec" setSpec
     testSpec "leqPair" leqPair
-    testSpec "setPair" setPair
     testSpecNoShrink "listEmpty" listEmpty
     testSpec "compositionalSpec" compositionalSpec
     testSpec "simplePairSpec" simplePairSpec
@@ -80,7 +83,6 @@ tests nightly =
     testSpec "maybeSpec" maybeSpec
     testSpecNoShrink "eitherSetSpec" eitherSetSpec
     testSpec "fooSpec" fooSpec
-    testSpec "mapElemSpec" mapElemSpec
     testSpec "mapElemKeySpec" mapElemKeySpec
     -- TODO: figure out why this doesn't shrink
     testSpecNoShrink "mapIsJust" mapIsJust
@@ -95,7 +97,6 @@ tests nightly =
     -- more detailed shrinking of `SuspendedSpec`s
     testSpecNoShrink "setPairSpec" setPairSpec
     testSpec "fixedSetSpec" fixedSetSpec
-    testSpec "setOfPairLetSpec" setOfPairLetSpec
     testSpecNoShrink "emptyEitherSpec" emptyEitherSpec
     testSpecNoShrink "emptyEitherMemberSpec" emptyEitherMemberSpec
     testSpec "setSingletonSpec" setSingletonSpec
@@ -315,11 +316,13 @@ testSpec' withShrink n s = do
         checkCoverage' $
           prop_constrained_explained s
 
+#if MIN_VERSION_QuickCheck(2, 16, 0)
     when withShrink $
       prop "prop_shrink_sound" $
         discardAfter 100_000 $
           checkCoverage' $
             prop_shrink_sound s
+#endif
 
 ------------------------------------------------------------------------
 -- Test properties of the instance Num (NumSpec Integer)
