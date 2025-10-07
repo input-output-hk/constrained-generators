@@ -54,7 +54,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        resolver: [lts-22, lts-23, nightly]
+        resolver: [lts-24, nightly]
         ghc-version: [latest, 9.12, "9.10", 9.8, 9.6]
     env:
       STACK_ARGS: '--resolver ${{ matrix.resolver }} --system-ghc'
@@ -93,7 +93,7 @@ jobs:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
       run: |
         set -ex
-        if [ "${{ matrix.os }}.${{ matrix.resolver }}" == "Ubuntu-latest.lts-23" ] && [ -n "${COVERALLS_REPO_TOKEN}" ]; then
+        if [ "${{ matrix.os }}.${{ matrix.resolver }}" == "Ubuntu-latest.lts-24" ] && [ -n "${COVERALLS_REPO_TOKEN}" ]; then
           stack $STACK_ARGS test --coverage
           stack $STACK_ARGS hpc report --all
           curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.7.0/shc-Linux-X64.tar.bz2 | tar xj shc
