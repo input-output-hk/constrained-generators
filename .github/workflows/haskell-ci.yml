@@ -1,4 +1,6 @@
 name: Haskell-CI
+permissions:
+  contents: read
 
 on:
   push:
@@ -15,13 +17,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  linux:
-    name: Haskell-CI - Linux - ${{ matrix.ghc-version }}
+  test-with-cabal:
+    name: Haskell-CI - Linux - cabal - ${{ matrix.ghc-version }}
 
     strategy:
       matrix:
         ghc-version: [latest, 9.12, "9.10", 9.8, 9.6]
-        os: [ubuntu-24.04]
+        os: [ubuntu-latest]
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
@@ -43,3 +45,59 @@ jobs:
         with:
           key: ${{ matrix.os }}-${{ matrix.ghc-version }}-${{ github.sha }}
           path: ~/.cabal/store
+
+
+  test-with-stack:
+    name: Stack
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        resolver: [lts-24, nightly]
+        ghc-version: [latest, 9.12, "9.10", 9.8, 9.6]
+    env:
+      STACK_ARGS: '--resolver ${{ matrix.resolver }} --system-ghc'
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: haskell-actions/setup@v2
+      id: setup-haskell-cabal
+      name: Setup Haskell
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        enable-stack: true
+        stack-version: ${{ matrix.stack || 'latest' }}
+
+    - name: Cache
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ steps.setup-haskell-cabal.outputs.stack-root }}
+          .stack-work
+        key: ${{ runner.os }}-${{ matrix.resolver }}-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.resolver }}
+    - name: Reset modtime
+      run: |
+        set -ex
+        curl -sSL https://raw.githubusercontent.com/lehins/utils/master/haskell/git-modtime/git-modtime.hs -o git-modtime.hs
+        runhaskell -- git-modtime.hs -f .stack-work-root/tree-contents.txt
+    - name: Build
+      run: |
+        set -ex
+        stack $STACK_ARGS test --no-run-tests --bench --no-run-benchmarks --haddock --no-haddock-deps
+    - name: Test
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+      run: |
+        set -ex
+        if [ "${{ matrix.os }}.${{ matrix.resolver }}" == "ubuntu-latest.lts-24" ] && [ -n "${COVERALLS_REPO_TOKEN}" ]; then
+          stack $STACK_ARGS test --coverage
+          stack $STACK_ARGS hpc report --all
+          curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.7.0/shc-Linux-X64.tar.bz2 | tar xj shc
+          ./shc --repo-token="$COVERALLS_REPO_TOKEN" --partial-coverage --fetch-coverage combined custom
+        else
+          stack $STACK_ARGS test
+        fi
