@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
@@ -35,11 +36,15 @@ import Constrained.PrettyUtils
 import Control.Applicative
 import Data.Function
 import Data.List.NonEmpty (NonEmpty ((:|)))
-import Data.List.NonEmpty qualified as NE
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Typeable
+
+-- Orphan instance for old QuickCheck versions
+#if !MIN_VERSION_QuickCheck(2, 17, 0)
+import Data.List.NonEmpty qualified as NE
 import Test.QuickCheck (Arbitrary (..), NonEmptyList (NonEmpty))
+#endif
 
 -- Variables --------------------------------------------------------------
 
@@ -135,7 +140,9 @@ instance Typeable c => Show (Evidence c) where
 unionWithMaybe :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
 unionWithMaybe f ma ma' = (f <$> ma <*> ma') <|> ma <|> ma'
 
+#if !MIN_VERSION_QuickCheck(2, 17, 0)
 instance Arbitrary a => Arbitrary (NonEmpty a) where
   arbitrary = do
     NonEmpty xs <- arbitrary
     pure (NE.fromList xs)
+#endif

@@ -1,2 +1,9 @@
 packages:
   .
+-- Always write GHC env files, because they are needed for repl and by the doctests.
+write-ghc-environment-files: always
+-- Always build tests and benchmarks.
+tests: true
+benchmarks: true
+-- The only sensible test display option
+test-show-details: streaming
