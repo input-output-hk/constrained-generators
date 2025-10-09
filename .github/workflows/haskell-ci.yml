@@ -92,10 +92,8 @@ jobs:
         if [ "${{ matrix.os }}.${{ matrix.resolver }}" == "ubuntu-latest.lts-24" ] && [ -n "${COVERALLS_REPO_TOKEN}" ]; then
           stack $STACK_ARGS test --coverage
           stack $STACK_ARGS hpc report --all
-          # curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.7.0/shc-Linux-X64.tar.bz2 | tar xj shc
-          # ./shc --repo-token="$COVERALLS_REPO_TOKEN" --partial-coverage --fetch-coverage combined all
-          stack $STACK_ARGS install stack-hpc-coveralls
-          shc --repo-token="$COVERALLS_REPO_TOKEN" --partial-coverage --fetch-coverage combined all
+          curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.7.0/shc-Linux-X64.tar.bz2 | tar xj shc
+          ./shc --repo-token="$COVERALLS_REPO_TOKEN" --partial-coverage --fetch-coverage combined all
         else
           stack $STACK_ARGS test
         fi
