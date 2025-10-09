@@ -46,7 +46,6 @@ jobs:
           key: ${{ matrix.os }}-${{ matrix.ghc-version }}-${{ github.sha }}
           path: ~/.cabal/store
 
-
   test-with-stack:
     name: Stack
     runs-on: ${{ matrix.os }}
@@ -67,7 +66,7 @@ jobs:
       with:
         ghc-version: ${{ matrix.ghc }}
         enable-stack: true
-        stack-version: ${{ matrix.stack || 'latest' }}
+        stack-version: latest
 
     - name: Cache
       id: cache
@@ -79,15 +78,12 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.resolver }}-${{ github.sha }}
         restore-keys: |
           ${{ runner.os }}-${{ matrix.resolver }}
-    - name: Reset modtime
-      run: |
-        set -ex
-        curl -sSL https://raw.githubusercontent.com/lehins/utils/master/haskell/git-modtime/git-modtime.hs -o git-modtime.hs
-        runhaskell -- git-modtime.hs -f .stack-work-root/tree-contents.txt
+
     - name: Build
       run: |
         set -ex
         stack $STACK_ARGS test --no-run-tests --bench --no-run-benchmarks --haddock --no-haddock-deps
+
     - name: Test
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
@@ -96,8 +92,10 @@ jobs:
         if [ "${{ matrix.os }}.${{ matrix.resolver }}" == "ubuntu-latest.lts-24" ] && [ -n "${COVERALLS_REPO_TOKEN}" ]; then
           stack $STACK_ARGS test --coverage
           stack $STACK_ARGS hpc report --all
-          curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.7.0/shc-Linux-X64.tar.bz2 | tar xj shc
-          ./shc --repo-token="$COVERALLS_REPO_TOKEN" --partial-coverage --fetch-coverage combined all
+          # curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.7.0/shc-Linux-X64.tar.bz2 | tar xj shc
+          # ./shc --repo-token="$COVERALLS_REPO_TOKEN" --partial-coverage --fetch-coverage combined all
+          stack $STACK_ARGS install stack-hpc-coveralls
+          shc --repo-token="$COVERALLS_REPO_TOKEN" --partial-coverage --fetch-coverage combined all
         else
           stack $STACK_ARGS test
         fi
