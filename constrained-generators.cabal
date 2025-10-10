@@ -121,7 +121,7 @@ library examples
     prettyprinter,
     random,
 
-test-suite constrained
+test-suite constrained-tests
   type: exitcode-stdio-1.0
   main-is: Tests.hs
   hs-source-dirs: test
