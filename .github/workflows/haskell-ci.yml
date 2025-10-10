@@ -48,19 +48,14 @@ jobs:
 
   test-with-stack:
     name: Stack
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        resolver: [lts-24, nightly]
+    runs-on: ubuntu-latest
     env:
-      STACK_ARGS: '--resolver ${{ matrix.resolver }} --system-ghc'
+      STACK_ARGS: '--resolver lts-24 --system-ghc'
     steps:
     - uses: actions/checkout@v4
 
     - uses: haskell-actions/setup@v2
-      id: setup-haskell-cabal
+      id: setup-haskell-stack
       name: Setup Haskell
       with:
         enable-stack: true
@@ -71,11 +66,11 @@ jobs:
       uses: actions/cache@v4
       with:
         path: |
-          ${{ steps.setup-haskell-cabal.outputs.stack-root }}
+          ${{ steps.setup-haskell-stack.outputs.stack-root }}
           .stack-work
-        key: ${{ runner.os }}-${{ matrix.resolver }}-${{ github.sha }}
+        key: ${{ runner.os }}-lts-24-${{ github.sha }}
         restore-keys: |
-          ${{ runner.os }}-${{ matrix.resolver }}
+          ${{ runner.os }}-lts-24
 
     - name: Build
       run: |
@@ -87,11 +82,8 @@ jobs:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
       run: |
         set -ex
-        if [ "${{ matrix.os }}.${{ matrix.resolver }}" == "ubuntu-latest.lts-24" ] && [ -n "${COVERALLS_REPO_TOKEN}" ]; then
-          stack $STACK_ARGS test --coverage
-          stack $STACK_ARGS hpc report --all
-          curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.7.0/shc-Linux-X64.tar.bz2 | tar xj shc
-          ./shc --repo-token="$COVERALLS_REPO_TOKEN" --partial-coverage --fetch-coverage combined all
-        else
-          stack $STACK_ARGS test
-        fi
+        [ -n "${COVERALLS_REPO_TOKEN}" ]
+        stack $STACK_ARGS test --coverage
+        stack $STACK_ARGS hpc report --all
+        curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.7.0/shc-Linux-X64.tar.bz2 | tar xj shc
+        ./shc --repo-token="$COVERALLS_REPO_TOKEN" --partial-coverage --fetch-coverage combined all
