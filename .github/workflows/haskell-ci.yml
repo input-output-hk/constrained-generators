@@ -74,7 +74,7 @@ jobs:
       run: |
         set -ex
         stack test --coverage
-        stack hpc report constrained-generators
+        stack hpc report --all
 
     - uses: actions/cache/save@v4
       with:
@@ -88,5 +88,6 @@ jobs:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
       run: |
         [ -n "${COVERALLS_REPO_TOKEN}" ]
+        stack path --local-hpc-root
         curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.7.0/shc-Linux-X64.tar.bz2 | tar xj shc
         ./shc --repo-token="$COVERALLS_REPO_TOKEN" --partial-coverage --fetch-coverage combined custom
