@@ -141,9 +141,12 @@ test-suite constrained-tests
     QuickCheck,
     base,
     constrained-generators,
-    constrained-generators:examples,
     containers,
-    hspec,
+    hspec
+
+  if !flag(devel)
+    build-depends:
+      constrained-generators:examples
 
 benchmark bench
   type: exitcode-stdio-1.0

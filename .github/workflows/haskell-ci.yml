@@ -73,7 +73,7 @@ jobs:
     - name: Test
       run: |
         set -ex
-        stack test --coverage
+        stack test --coverage --flag constrained-generators:devel
         stack hpc report --all
 
     - uses: actions/cache/save@v4
