@@ -1,0 +1,4 @@
+snapshot: lts-24.14
+packages:
+- .
+system-ghc: true
