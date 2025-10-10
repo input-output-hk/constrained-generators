@@ -54,7 +54,6 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         resolver: [lts-24, nightly]
-        ghc-version: [latest, 9.12, "9.10", 9.8, 9.6]
     env:
       STACK_ARGS: '--resolver ${{ matrix.resolver }} --system-ghc'
     steps:
@@ -64,7 +63,6 @@ jobs:
       id: setup-haskell-cabal
       name: Setup Haskell
       with:
-        ghc-version: ${{ matrix.ghc }}
         enable-stack: true
         stack-version: latest
 
