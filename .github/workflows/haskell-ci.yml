@@ -73,11 +73,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-lts-24
 
-    - name: Build
-      run: |
-        set -ex
-        stack $STACK_ARGS test --no-run-tests --bench --no-run-benchmarks --haddock --no-haddock-deps
-
     - name: Test
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
