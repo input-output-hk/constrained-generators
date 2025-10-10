@@ -68,23 +68,20 @@ jobs:
           ${{ steps.setup-haskell-stack.outputs.stack-root }}
           .stack-work
         key: ${{ runner.os }}-lts-24-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-lts-24
+        restore-keys: ${{ runner.os }}-lts-24
 
     - name: Test
-      env:
-        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
       run: |
         set -ex
         stack test --coverage
         stack hpc report constrained-generators
 
-      - uses: actions/cache/save@v4
-        with:
-          path: |
-            ${{ steps.setup-haskell-stack.outputs.stack-root }}
-            .stack-work
-          key: ${{ runner.os }}-lts-24-${{ github.sha }}
+    - uses: actions/cache/save@v4
+      with:
+        path: |
+          ${{ steps.setup-haskell-stack.outputs.stack-root }}
+          .stack-work
+        key: ${{ runner.os }}-lts-24-${{ github.sha }}
 
     - name: Upload coverage report
       env:
