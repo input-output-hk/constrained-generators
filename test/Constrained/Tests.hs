@@ -317,7 +317,7 @@ testSpec' withShrink n s = do
         checkCoverage' $
           prop_constrained_explained s
 
-#if MIN_VERSION_QuickCheck(2, 16, 0)
+#if MIN_VERSION_QuickCheck(2, 15, 0)
     when withShrink $
       prop "prop_shrink_sound" $
         discardAfter 100_000 $
