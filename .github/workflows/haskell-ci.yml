@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   test-with-cabal:
-    name: Haskell-CI - Linux - cabal - ${{ matrix.ghc-version }}
+    name: Haskell-CI - Linux - ${{ matrix.ghc-version }}
 
     strategy:
       matrix:
