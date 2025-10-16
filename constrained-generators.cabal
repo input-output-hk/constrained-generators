@@ -15,7 +15,7 @@ source-repository head
   type: git
   location: https://github.com/input-output-hk/constrained-generators
 
-flag devel
+flag dev
   description:       Enable development mode
   default:           False
   manual:            True
@@ -52,7 +52,7 @@ library
 
   hs-source-dirs: src
 
-  if flag(devel)
+  if flag(dev)
     exposed-modules:
       Constrained.Examples
       Constrained.Examples.Basic
