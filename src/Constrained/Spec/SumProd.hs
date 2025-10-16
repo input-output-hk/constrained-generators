@@ -590,10 +590,17 @@ chooseSpec ::
 chooseSpec (w, s) (w', s') =
   constrained $ \x ->
     exists (\eval -> pure $ if eval x `conformsToSpec` s then PickFirst else PickSecond) $ \p ->
-      caseOn
-        p
-        (branchW w' $ \_ -> (x `satisfies` s))
-        (branchW w $ \_ -> (x `satisfies` s'))
+      [ caseOn
+          p
+          (branch $ \_ -> (x `satisfies` s))
+          (branch $ \_ -> (x `satisfies` s'))
+      -- This is a bit ugly :(
+      , caseOn
+          p
+          (branchW w $ \_ -> True)
+          (branchW w' $ \_ -> True)
+      , x `dependsOn` p
+      ]
 
 data Picky = PickFirst | PickSecond deriving (Ord, Eq, Show, Generic)
 

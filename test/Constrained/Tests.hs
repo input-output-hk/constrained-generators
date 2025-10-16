@@ -154,6 +154,7 @@ tests nightly =
     testSpecNoShrink "threeSpecific" threeSpecific
     testSpecNoShrink "threeSpecific'" threeSpecific'
     testSpecNoShrink "trueSpecUniform" trueSpecUniform
+    testSpec "posNegDistr" posNegDistr
     testSpec "ifElseMany" ifElseMany
     testSpecNoShrink "propBack" propBack
     testSpecNoShrink "propBack'" propBack'
