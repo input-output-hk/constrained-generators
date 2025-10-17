@@ -774,6 +774,33 @@ instance {-# OVERLAPPABLE #-} (HasSpec a, MaybeBounded a, Integral a, TypeSpec a
           then r - signum a
           else r
 
+instance HasDivision (Ratio Integer) where
+  doDivide = (/)
+
+  divideSpec 0 _ = TrueSpec
+  divideSpec a (NumSpecInterval ml mu) = typeSpec ts
+    where
+      ts | a > 0 = NumSpecInterval ml' mu'
+         | otherwise = NumSpecInterval mu' ml'
+      ml' = adjustLowerBound <$> ml
+      mu' = adjustUpperBound <$> mu
+      adjustLowerBound l =
+        let r = l / a
+            l' = r * a
+        in
+        if l' < l
+        then r + (l - l') * 2 / a
+        else r
+
+      adjustUpperBound u =
+        let r = u / a
+            u' = r * a
+        in
+        if u < u'
+        then r - (u' - u) * 2 / a
+        else r
+
+
 instance HasDivision Float where
   doDivide = (/)
 

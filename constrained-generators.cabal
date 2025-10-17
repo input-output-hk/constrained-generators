@@ -121,7 +121,7 @@ library examples
     prettyprinter,
     random,
 
-test-suite constrained
+test-suite constrained-tests
   type: exitcode-stdio-1.0
   main-is: Tests.hs
   hs-source-dirs: test
@@ -141,9 +141,12 @@ test-suite constrained
     QuickCheck,
     base,
     constrained-generators,
-    constrained-generators:examples,
     containers,
-    hspec,
+    hspec
+
+  if !flag(dev)
+    build-depends:
+      constrained-generators:examples
 
 benchmark bench
   type: exitcode-stdio-1.0

@@ -1,4 +1,6 @@
 name: Haskell-CI
+permissions:
+  contents: read
 
 on:
   push:
@@ -15,13 +17,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  linux:
+  test-with-cabal:
     name: Haskell-CI - Linux - ${{ matrix.ghc-version }}
 
     strategy:
       matrix:
         ghc-version: [latest, 9.12, "9.10", 9.8, 9.6]
-        os: [ubuntu-24.04]
+        os: [ubuntu-latest]
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
@@ -43,3 +45,45 @@ jobs:
         with:
           key: ${{ matrix.os }}-${{ matrix.ghc-version }}-${{ github.sha }}
           path: ~/.cabal/store
+
+  test-with-stack:
+    name: Stack
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: haskell-actions/setup@v2
+      id: setup-haskell-stack
+      name: Setup Haskell
+      with:
+        enable-stack: true
+        stack-version: latest
+        ghc-version: 9.6.7
+
+    - name: Cache
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ steps.setup-haskell-stack.outputs.stack-root }}
+          .stack-work
+        key: ${{ runner.os }}-stack-${{ github.sha }}
+        restore-keys: ${{ runner.os }}-stack
+
+    - name: Test
+      run: stack test --coverage --flag constrained-generators:dev
+
+    - uses: actions/cache/save@v4
+      with:
+        path: |
+          ${{ steps.setup-haskell-stack.outputs.stack-root }}
+          .stack-work
+        key: ${{ runner.os }}-stack-${{ github.sha }}
+
+    - name: Upload coverage report
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+      run: |
+        [ -n "${COVERALLS_REPO_TOKEN}" ]
+        curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.7.0/shc-Linux-X64.tar.bz2 | tar xj shc
+        ./shc --repo-token="$COVERALLS_REPO_TOKEN" --partial-coverage --fetch-coverage combined all

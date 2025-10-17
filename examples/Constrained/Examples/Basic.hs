@@ -363,3 +363,6 @@ pairCant = constrained' $ \ [var| i |] [var| p |] ->
     , not_ $ k `elem_` lit [1..9]
     ]
   ]
+
+signumPositive :: Specification Rational
+signumPositive = constrained $ \ x -> signum (x * 30) >=. 1
