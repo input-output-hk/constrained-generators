@@ -79,7 +79,7 @@ library
     -Wunused-packages
 
   build-depends:
-    QuickCheck >=2.14 && <2.18,
+    QuickCheck >=2.15.0.1 && <2.18,
     base >=4.18 && <5,
     base-orphans,
     containers,
@@ -114,7 +114,7 @@ library examples
     -Wunused-packages
 
   build-depends:
-    QuickCheck >=2.14,
+    QuickCheck >=2.15.0.1,
     base >=4.18 && <5,
     constrained-generators,
     containers,
@@ -125,7 +125,9 @@ test-suite constrained-tests
   type: exitcode-stdio-1.0
   main-is: Tests.hs
   hs-source-dirs: test
-  other-modules: Constrained.Tests
+  other-modules:
+    Constrained.Tests
+    Constrained.GraphSpec
   default-language: Haskell2010
   ghc-options:
     -Wall
@@ -138,7 +140,7 @@ test-suite constrained-tests
     -rtsopts
 
   build-depends:
-    QuickCheck,
+    QuickCheck >= 2.15.0.1,
     base,
     constrained-generators,
     containers,
