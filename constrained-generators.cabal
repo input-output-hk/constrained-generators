@@ -140,7 +140,7 @@ test-suite constrained-tests
     -rtsopts
 
   build-depends:
-    QuickCheck,
+    QuickCheck >= 2.15.0.1,
     base,
     constrained-generators,
     containers,
