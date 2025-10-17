@@ -51,7 +51,6 @@ module Constrained.Syntax (
   computeDependencies,
   solvableFrom,
   respecting,
-  dependency,
   applyNameHints,
   envFromPred,
   isLit,
@@ -833,10 +832,6 @@ applyNameHints spec = spec
 
 -- | `Graph` specialized to dependencies for variables
 type DependGraph = Graph.Graph Name
-
--- | A variable depends on a thing witha buch of other variables
-dependency :: HasVariables t => Name -> t -> DependGraph
-dependency x (freeVarSet -> xs) = Graph.dependency x xs
 
 -- | Everything to the left depends on everything from the right, except themselves
 irreflexiveDependencyOn ::
