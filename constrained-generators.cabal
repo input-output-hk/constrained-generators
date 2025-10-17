@@ -144,7 +144,7 @@ test-suite constrained-tests
     containers,
     hspec
 
-  if !flag(devel)
+  if !flag(dev)
     build-depends:
       constrained-generators:examples
 

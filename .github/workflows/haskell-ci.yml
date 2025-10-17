@@ -71,7 +71,7 @@ jobs:
         restore-keys: ${{ runner.os }}-stack
 
     - name: Test
-      run: stack test --coverage --flag constrained-generators:devel
+      run: stack test --coverage --flag constrained-generators:dev
 
     - uses: actions/cache/save@v4
       with:
