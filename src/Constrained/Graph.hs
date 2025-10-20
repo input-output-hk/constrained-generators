@@ -169,7 +169,6 @@ topsort gr@(Graph e _) = go [] e
             else Left . concat . take 1 . sortOn length . filter (not . null) . map (findCycle gr) $ Map.keys e
 
 -- | Simple DFS cycle finding
--- TODO: tests for this, currently it can produce a stem with a cycle after it
 findCycle :: Ord node => Graph node -> node -> [node]
 findCycle g@(Graph e _) node = concat . take 1 $ filter loopy $ go mempty node
   where

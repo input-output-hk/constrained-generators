@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -33,6 +34,21 @@ prop_subtract_topsort :: Graph Node -> Graph Node -> Property
 prop_subtract_topsort g g' =
   isRight (topsort g) ==>
     isRight (topsort $ subtractGraph g g')
+
+prop_subtract_union :: Graph Node -> Graph Node -> Property
+prop_subtract_union g g0' =
+  let g' = subtractGraph g g0'
+  in subtractGraph g g' <> g' === g
+
+prop_subtract_keeps_nodes :: Graph Node -> Graph Node -> Property
+prop_subtract_keeps_nodes g g' = nodes (subtractGraph g g') === nodes g
+
+prop_subtract_removes_edges :: Graph Node -> Graph Node -> Node -> Node -> Property
+prop_subtract_removes_edges g g' x y =
+  property $ not (dependsOn x y (subtractGraph g $ dependency x (Set.singleton y) <> g'))
+
+prop_union_commutes :: Graph Node -> Graph Node -> Property
+prop_union_commutes g g' = g <> g' === g' <> g
 
 prop_delete_topsort :: Graph Node -> Node -> Property
 prop_delete_topsort g n =
@@ -95,22 +111,8 @@ prop_find_cycle_loops =
       | n <- Set.toList $ nodes g
       ]
 
+return []
+
 tests :: Bool -> Spec
 tests _nightly =
-  describe "Graph tests" $ do
-    prop "prop_arbitrary_reasonable_distribution" $ checkCoverage $ prop_arbitrary_reasonable_distribution
-    prop "prop_no_dependencies_topsort"           $ checkCoverage $ prop_no_dependencies_topsort
-    prop "prop_subtract_topsort"                  $ checkCoverage $ prop_subtract_topsort
-    prop "prop_delete_topsort"                    $ checkCoverage $ prop_delete_topsort
-    prop "prop_op_topsort"                        $ checkCoverage $ prop_op_topsort
-    prop "prop_trC_topsort"                       $ checkCoverage $ prop_trC_topsort
-    prop "prop_trC_opgraph_commute"               $ checkCoverage $ prop_trC_opgraph_commute
-    prop "prop_depends_grows"                     $ checkCoverage $ prop_depends_grows
-    prop "prop_topsort_all_nodes"                 $ checkCoverage $ prop_topsort_all_nodes
-    prop "prop_topsort_sound"                     $ checkCoverage $ prop_topsort_sound
-    prop "prop_topsort_complete"                  $ checkCoverage $ prop_topsort_complete
-    prop "prop_find_cycle_sound"                  $ checkCoverage $ prop_find_cycle_sound
-    prop "prop_find_cycle_loops"                  $ checkCoverage $ prop_find_cycle_loops
-
-runTests :: IO ()
-runTests = hspec $ tests False
+  describe "Graph tests" $ sequence_ [ prop n (checkCoverage $ withMaxSuccess 1000 p) | (n, p) <- $allProperties ]
