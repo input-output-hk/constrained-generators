@@ -155,14 +155,69 @@ shrinkWithSpec (simplifySpec -> spec) a = filter (`conformsToSpec` spec) $ case 
   ExplainSpec _ s -> shrinkWithSpec s a
   -- TODO: filter on can't if we have a known to be sound shrinker
   TypeSpec s _ -> shrinkWithTypeSpec s a
-  -- TODO: The better way of doing this is to compute the dependency graph,
-  -- shrink one variable at a time, and fixup the rest of the variables
-  SuspendedSpec {} -> shr a
+  SuspendedSpec x p -> shrinkFromPreds p x a
   MemberSpec {} -> shr a
   TrueSpec -> shr a
   ErrorSpec {} -> []
   where
     shr = shrinkWithTypeSpec (emptySpec @a)
+
+shrinkFromPreds :: HasSpec a => Pred -> Var a -> a -> [a]
+shrinkFromPreds p
+  | Result plan <- prepareLinearization p = \x a -> listFromGE $ do
+      -- NOTE: we do this to e.g. guard against bad construction functions in Exists
+      xaGood <- checkPred (Env.singleton x a) p
+      unless xaGood $
+        fatalError "Trying to shrink a bad value, don't do that!"
+      -- Get an `env` for the original value
+      initialEnv <- envFromPred (Env.singleton x a) p
+      return
+        [ a'
+        | -- Shrink the initialEnv
+        env' <- shrinkEnvFromPlan initialEnv plan
+        , -- Get the value of the constrained variable `x` in the shrunk env
+        Just a' <- [Env.lookup env' x]
+        , -- NOTE: this is necessary because it's possible that changing
+        -- a particular value in the env during shrinking might not result
+        -- in the value of `x` changing and there is no better way to know than
+        -- to do this.
+        a' /= a
+        ]
+  | otherwise = error "Bad pred"
+
+-- Start with a valid Env for the plan and try to shrink it
+shrinkEnvFromPlan :: Env -> SolverPlan -> [Env]
+shrinkEnvFromPlan initialEnv SolverPlan {..} = go mempty solverPlan
+  where
+    go :: Env -> [SolverStage] -> [Env]
+    go _ [] = [] -- In this case we decided to keep every variable the same so nothing to return
+    go env ((unsafeSubstStage env -> SolverStage {..}) : plan) = do
+      Just a <- [Env.lookup initialEnv stageVar]
+      -- Two cases:
+      --  - either we shrink this value and try to fixup every value later on in the plan or
+      [ fixedEnv
+        | a' <- shrinkWithSpec stageSpec a
+        , let env' = Env.extend stageVar a' env
+        , Just fixedEnv <- [fixupPlan env' plan]
+        ]
+        --  - we keep this value the way it is and try to shrink some later value
+        ++ go (Env.extend stageVar a env) plan
+
+    -- Fix the rest of the plan given an environment `env` for the plan so far
+    fixupPlan :: Env -> [SolverStage] -> Maybe Env
+    fixupPlan env [] = pure env
+    fixupPlan env ((unsafeSubstStage env -> SolverStage {..}) : plan) =
+      case Env.lookup initialEnv stageVar >>= fixupWithSpec stageSpec of
+        Nothing -> Nothing
+        Just a -> fixupPlan (Env.extend stageVar a env) plan
+
+-- Try to fix a value w.r.t a specification
+fixupWithSpec :: forall a. HasSpec a => Specification a -> a -> Maybe a
+fixupWithSpec spec a
+  | a `conformsToSpec` spec = Just a
+  | otherwise = case spec of
+      MemberSpec (a' :| _) -> Just a'
+      _ -> listToMaybe $ filter (`conformsToSpec` spec) (shrinkWithSpec TrueSpec a)
 
 -- Debugging --------------------------------------------------------------
 
@@ -196,6 +251,10 @@ prettyPlan (simplifySpec -> spec)
   | otherwise = "Simplfied spec:" /> pretty spec
 
 -- ---------------------- Building a plan -----------------------------------
+
+unsafeSubstStage :: Env -> SolverStage -> SolverStage
+unsafeSubstStage env (SolverStage y ps spec relevant) =
+  normalizeSolverStage $ SolverStage y (substPred env <$> ps) spec relevant
 
 substStage :: HasSpec a => Set Name -> Var a -> a -> SolverStage -> SolverStage
 substStage rel' x val (SolverStage y ps spec relevant) =
