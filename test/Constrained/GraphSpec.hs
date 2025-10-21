@@ -45,7 +45,7 @@ prop_subtract_keeps_nodes g g' = nodes (subtractGraph g g') === nodes g
 
 prop_subtract_removes_edges :: Graph Node -> Graph Node -> Node -> Node -> Property
 prop_subtract_removes_edges g g' x y =
-  property $ not (dependsOn x y (subtractGraph g $ dependency x (Set.singleton y) <> g'))
+  property $ not (dependsOn x y (subtractGraph (dependency x (Set.singleton y) <> g) $ dependency x (Set.singleton y) <> g'))
 
 prop_union_commutes :: Graph Node -> Graph Node -> Property
 prop_union_commutes g g' = g <> g' === g' <> g
