@@ -29,6 +29,9 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      - name: Set NIGHTLY environment variable if scheduled
+        if: github.event_name == 'schedule'
+        run: echo "NIGHTLY=1" >> $GITHUB_ENV
       - uses: actions/checkout@v4
       - uses: haskell-actions/setup@v2
         with:
@@ -50,40 +53,43 @@ jobs:
     name: Stack
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - name: Set NIGHTLY environment variable if scheduled
+        if: github.event_name == 'schedule'
+        run: echo "NIGHTLY=1" >> $GITHUB_ENV
+      - uses: actions/checkout@v4
 
-    - uses: haskell-actions/setup@v2
-      id: setup-haskell-stack
-      name: Setup Haskell
-      with:
-        enable-stack: true
-        stack-version: latest
-        ghc-version: 9.6.7
+      - uses: haskell-actions/setup@v2
+        id: setup-haskell-stack
+        name: Setup Haskell
+        with:
+          enable-stack: true
+          stack-version: latest
+          ghc-version: 9.6.7
 
-    - name: Cache
-      id: cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          ${{ steps.setup-haskell-stack.outputs.stack-root }}
-          .stack-work
-        key: ${{ runner.os }}-stack-${{ github.sha }}
-        restore-keys: ${{ runner.os }}-stack
+      - name: Cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.setup-haskell-stack.outputs.stack-root }}
+            .stack-work
+          key: ${{ runner.os }}-stack-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-stack
 
-    - name: Test
-      run: stack test --coverage --flag constrained-generators:dev
+      - name: Test
+        run: stack test --coverage --flag constrained-generators:dev
 
-    - uses: actions/cache/save@v4
-      with:
-        path: |
-          ${{ steps.setup-haskell-stack.outputs.stack-root }}
-          .stack-work
-        key: ${{ runner.os }}-stack-${{ github.sha }}
+      - uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ steps.setup-haskell-stack.outputs.stack-root }}
+            .stack-work
+          key: ${{ runner.os }}-stack-${{ github.sha }}
 
-    - name: Upload coverage report
-      env:
-        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-      run: |
-        [ -n "${COVERALLS_REPO_TOKEN}" ]
-        curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.7.0/shc-Linux-X64.tar.bz2 | tar xj shc
-        ./shc --repo-token="$COVERALLS_REPO_TOKEN" --partial-coverage --fetch-coverage combined all
+      - name: Upload coverage report
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        run: |
+          [ -n "${COVERALLS_REPO_TOKEN}" ]
+          curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.7.0/shc-Linux-X64.tar.bz2 | tar xj shc
+          ./shc --repo-token="$COVERALLS_REPO_TOKEN" --partial-coverage --fetch-coverage combined all
