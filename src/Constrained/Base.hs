@@ -492,6 +492,9 @@ class
   -- | Shrink an `a` with the aide of a `TypeSpec`
   shrinkWithTypeSpec :: TypeSpec a -> a -> [a]
 
+  -- | Try to make an `a` conform to `TypeSpec` with minimal changes
+  fixupWithTypeSpec :: TypeSpec a -> a -> Maybe a
+
   -- | Convert a spec to predicates:
   -- The key property here is:
   --   ∀ a. a `conformsTo` spec == a `conformsTo` constrained (\t -> toPreds t spec)
@@ -608,6 +611,13 @@ class
     [a]
   shrinkWithTypeSpec spec a = map fromSimpleRep $ shrinkWithTypeSpec spec (toSimpleRep a)
 
+  default fixupWithTypeSpec ::
+    GenericallyInstantiated a =>
+    TypeSpec a ->
+    a ->
+    Maybe a
+  fixupWithTypeSpec spec a = fromSimpleRep <$> fixupWithTypeSpec spec (toSimpleRep a)
+
   default cardinalTypeSpec ::
     GenericallyInstantiated a =>
     TypeSpec a ->
@@ -628,6 +638,7 @@ instance HasSpec Bool where
   cardinalTypeSpec _ = equalSpec 2
   cardinalTrueSpec = equalSpec 2
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ = Just
   conformsTo _ _ = True
   toPreds _ _ = TruePred
 
@@ -637,6 +648,7 @@ instance HasSpec () where
   combineSpec _ _ = typeSpec ()
   _ `conformsTo` _ = True
   shrinkWithTypeSpec _ _ = []
+  fixupWithTypeSpec _ _ = pure ()
   genFromTypeSpec _ = pure ()
   toPreds _ _ = TruePred
   cardinalTypeSpec _ = MemberSpec (pure 1)

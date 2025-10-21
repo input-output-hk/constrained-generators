@@ -66,8 +66,7 @@ tests nightly =
     testSpec "mapElemSpec" mapElemSpec
     testSpec "complicatedEither" complicatedEither
     testSpec "pairCant" pairCant
-    -- TODO: figure out why this doesn't shrink
-    testSpecNoShrink "reifiesMultiple" reifiesMultiple
+    testSpec "reifiesMultiple" reifiesMultiple
     testSpec "assertReal" assertReal
     testSpecNoShrink "chooseBackwards" chooseBackwards
     testSpecNoShrink "chooseBackwards'" chooseBackwards'
@@ -85,15 +84,13 @@ tests nightly =
     testSpecNoShrink "eitherSetSpec" eitherSetSpec
     testSpec "fooSpec" fooSpec
     testSpec "mapElemKeySpec" mapElemKeySpec
-    -- TODO: figure out why this doesn't shrink
-    testSpecNoShrink "mapIsJust" mapIsJust
+    testSpec "mapIsJust" mapIsJust
+    -- NOTE: very slow to check in shrinking
     testSpecNoShrink "eitherKeys" eitherKeys
-    -- TODO: figure out why this doesn't shrink
-    testSpecNoShrink "intSpec" intSpec
+    testSpec "intSpec" intSpec
     testSpec "mapPairSpec" mapPairSpec
-    -- TODO: figure out why this doesn't shrink
     testSpecNoShrink "mapEmptyDomainSpec" mapEmptyDomainSpec
-    -- TODO: this _can_ be shrunk, but it's incredibly expensive to do
+    -- NOTE: this _can_ be shrunk, but it's incredibly expensive to do
     -- so and it's not obvious if there is a faster way without implementing
     -- more detailed shrinking of `SuspendedSpec`s
     testSpecNoShrink "setPairSpec" setPairSpec
@@ -105,24 +102,21 @@ tests nightly =
     testSpec "eitherSimpleSetSpec" eitherSimpleSetSpec
     testSpecNoShrink "emptySetSpec" emptySetSpec
     testSpec "forAllAnySpec" forAllAnySpec
-    testSpecNoShrink "notSubsetSpec" notSubsetSpec
+    testSpec "notSubsetSpec" notSubsetSpec
     testSpec "maybeJustSetSpec" maybeJustSetSpec
     testSpec "weirdSetPairSpec" weirdSetPairSpec
     testSpec "knownDomainMap" knownDomainMap
-    -- TODO: figure out why this doesn't shrink
-    testSpecNoShrink "testRewriteSpec" testRewriteSpec
+    testSpec "testRewriteSpec" testRewriteSpec
     testSpec "parallelLet" parallelLet
     testSpec "letExists" letExists
     testSpec "letExistsLet" letExistsLet
     testSpec "notSubset" notSubset
     testSpec "unionSized" unionSized
-    -- TODO: figure out why this doesn't shrink
-    testSpecNoShrink "dependencyWeirdness" dependencyWeirdness
+    testSpec "dependencyWeirdness" dependencyWeirdness
     testSpec "foldTrueCases" foldTrueCases
     testSpec "foldSingleCase" foldSingleCase
     testSpec "listSumPair" (listSumPair @Int)
-    -- TODO: figure out why this doesn't shrink
-    testSpecNoShrink "parallelLetPair" parallelLetPair
+    testSpec "parallelLetPair" parallelLetPair
     testSpec "mapSizeConstrained" mapSizeConstrained
     testSpec "isAllZeroTree" isAllZeroTree
     testSpec "noChildrenSameTree" noChildrenSameTree
@@ -144,8 +138,7 @@ tests nightly =
     testSpec "appendSize" appendSize
     testSpecNoShrink "appendSingleton" appendSingleton
     testSpec "singletonSubset" singletonSubset
-    -- TODO: figure out why this doesn't shrink
-    testSpecNoShrink "reifyYucky" reifyYucky
+    testSpec "reifyYucky" reifyYucky
     testSpec "fixedRange" fixedRange
     testSpec "rangeHint" rangeHint
     testSpec "basicSpec" basicSpec

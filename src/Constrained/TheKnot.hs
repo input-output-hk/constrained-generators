@@ -136,6 +136,9 @@ instance (HasSpec a, HasSpec b) => HasSpec (Prod a b) where
     [Prod a' b | a' <- shrinkWithSpec sa a]
       ++ [Prod a b' | b' <- shrinkWithSpec sb b]
 
+  fixupWithTypeSpec (Cartesian sa sb) (Prod a b) =
+    Prod <$> fixupWithSpec sa a <*> fixupWithSpec sb b
+
   toPreds x (Cartesian sf ss) =
     satisfies (prodFst_ x) sf
       <> satisfies (prodSnd_ x) ss

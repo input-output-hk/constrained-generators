@@ -25,6 +25,7 @@ module Constrained.Generation (
   genFromSpecT,
   genFromSpecWithSeed,
   shrinkWithSpec,
+  fixupWithSpec,
   simplifySpec,
 
   -- ** Debugging
@@ -207,7 +208,7 @@ shrinkEnvFromPlan initialEnv SolverPlan {..} = go mempty solverPlan
     fixupPlan :: Env -> [SolverStage] -> Maybe Env
     fixupPlan env [] = pure env
     fixupPlan env ((unsafeSubstStage env -> SolverStage {..}) : plan) =
-      case Env.lookup initialEnv stageVar >>= fixupWithSpec stageSpec of
+      case Env.lookup (env <> initialEnv) stageVar >>= fixupWithSpec stageSpec of
         Nothing -> Nothing
         Just a -> fixupPlan (Env.extend stageVar a env) plan
 
@@ -217,6 +218,7 @@ fixupWithSpec spec a
   | a `conformsToSpec` spec = Just a
   | otherwise = case spec of
       MemberSpec (a' :| _) -> Just a'
+      TypeSpec ts _ -> fixupWithTypeSpec ts a >>= \ a' -> a' <$  guard (conformsToSpec a' spec)
       _ -> listToMaybe $ filter (`conformsToSpec` spec) (shrinkWithSpec TrueSpec a)
 
 -- Debugging --------------------------------------------------------------
@@ -1163,6 +1165,9 @@ instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => HasSpec (Sum a b) wh
 
   shrinkWithTypeSpec (SumSpec _ sa _) (SumLeft a) = SumLeft <$> shrinkWithSpec sa a
   shrinkWithTypeSpec (SumSpec _ _ sb) (SumRight b) = SumRight <$> shrinkWithSpec sb b
+
+  fixupWithTypeSpec (SumSpec _ sa _) (SumLeft a) = SumLeft <$> fixupWithSpec sa a
+  fixupWithTypeSpec (SumSpec _ _ sb) (SumRight b) = SumRight <$> fixupWithSpec sb b
 
   toPreds ct (SumSpec h sa sb) =
     Case

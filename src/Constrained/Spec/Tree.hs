@@ -109,6 +109,9 @@ instance HasSpec a => HasSpec (Tree a) where
          | ts' <- shrinkList (shrinkWithTypeSpec (TreeSpec Nothing Nothing TrueSpec ctxSpec)) ts
          ]
 
+  -- TODO: fixme
+  fixupWithTypeSpec _ _ = Nothing
+
   cardinalTypeSpec _ = mempty
 
   toPreds t (TreeSpec mal msz rs s) =
