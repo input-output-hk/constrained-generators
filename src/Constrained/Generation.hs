@@ -156,7 +156,7 @@ shrinkWithSpec (simplifySpec -> spec) a = filter (`conformsToSpec` spec) $ case 
   ExplainSpec _ s -> shrinkWithSpec s a
   -- TODO: filter on can't if we have a known to be sound shrinker
   TypeSpec s _ -> shrinkWithTypeSpec s a
-  SuspendedSpec x p -> shrinkFromPreds p x a
+  SuspendedSpec x p -> shrinkFromPreds p x a ++ shr a
   MemberSpec {} -> shr a
   TrueSpec -> shr a
   ErrorSpec {} -> []
