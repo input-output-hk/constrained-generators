@@ -488,7 +488,10 @@ class
   -- | Shrink an `a` with the aide of a `TypeSpec`
   shrinkWithTypeSpec :: TypeSpec a -> a -> [a]
 
-  -- | Try to make an `a` conform to `TypeSpec` with minimal changes
+  -- | Try to make an `a` conform to `TypeSpec` with minimal changes. When
+  -- `fixupWithSpec ts a` returns `Just a'`, it should be the case that
+  -- `conformsTo a' ts`. There are no constraints in the `Nothing` case. A
+  -- non-trivial implementation of this function is important for shrinking.
   fixupWithTypeSpec :: TypeSpec a -> a -> Maybe a
 
   -- | Convert a spec to predicates:
