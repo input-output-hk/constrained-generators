@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -441,3 +442,12 @@ instance QC.Arbitrary TestableFn where
       , TestableFn $ AppendW @Int
       ]
   shrink _ = []
+
+-- Cruft ------------------------------------------------------------------
+
+#if !MIN_VERSION_QuickCheck(2, 17, 0)
+instance Arbitrary a => Arbitrary (NonEmpty a) where
+  arbitrary = do
+    NonEmpty xs <- arbitrary
+    pure (NE.fromList xs)
+#endif
