@@ -5,7 +5,10 @@
 -- | This module provides a dependency graph implementation.
 module Constrained.Graph (
   Graph,
+  edges,
+  opEdges,
   opGraph,
+  mkGraph,
   nodes,
   deleteNode,
   subtractGraph,
@@ -22,20 +25,21 @@ module Constrained.Graph (
 
 import Control.Monad
 import Data.Foldable
-import Data.List (sortOn)
+import Data.List (sortOn, nub)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Prettyprinter
+import Test.QuickCheck
 
 -- | A graph with unlabeled edges for keeping track of dependencies
 data Graph node = Graph
   { edges :: !(Map node (Set node))
   , opEdges :: !(Map node (Set node))
   }
-  deriving (Show)
+  deriving (Show, Eq)
 
 instance Ord node => Semigroup (Graph node) where
   Graph e o <> Graph e' o' =
@@ -54,6 +58,37 @@ instance Pretty n => Pretty (Graph n) where
         [ nest 4 $ pretty n <> " <- " <> brackets (fillSep (map pretty (Set.toList ns)))
         | (n, ns) <- Map.toList (edges gr)
         ]
+
+-- | Construct a graph
+mkGraph :: Ord node => Map node (Set node) -> Graph node
+mkGraph e0 = Graph e $ Map.unionsWith (<>)
+                          [ Map.fromList $ (p, mempty) : [ (c, Set.singleton p)
+                                                         | c <- Set.toList cs
+                                                         ]
+                          | (p, cs) <- Map.toList e
+                          ]
+  where e = Map.unionWith (<>) e0 (Map.fromList [ (c, mempty) | (_, cs) <- Map.toList e0
+                                                              , c <- Set.toList cs
+                                                ])
+
+instance (Arbitrary node, Ord node) => Arbitrary (Graph node) where
+  arbitrary =
+    frequency [ (1, mkGraph <$> arbitrary)
+              , (3, do order <- nub <$> arbitrary
+                       mkGraph <$> buildGraph order
+                )
+              ]
+    where buildGraph [] = return mempty
+          buildGraph [n] = return (Map.singleton n mempty)
+          buildGraph (n:ns) = do
+            deps <- listOf (elements ns)
+            Map.insert n (Set.fromList deps) <$> buildGraph ns
+  shrink g =
+    [ mkGraph e'
+    | e <- shrink (edges g)
+    -- If we don't do this it's very easy to introduce a shrink-loop
+    , let e' = fmap (\ xs -> Set.filter (`Map.member` e) xs) e
+    ]
 
 -- | Get all the nodes of a graph
 nodes :: Graph node -> Set node
@@ -102,11 +137,12 @@ irreflexiveDependencyOn xs ys =
 
 -- | Get all down-stream dependencies of a node
 transitiveDependencies :: Ord node => node -> Graph node -> Set node
-transitiveDependencies x (Graph e _) = go (Set.singleton x) x
+transitiveDependencies x (Graph e _) = go mempty (Set.toList $ fromMaybe mempty $ Map.lookup x e)
   where
-    go seen y = ys <> foldMap (go $ Set.insert y seen) (Set.difference ys seen)
-      where
-        ys = fromMaybe mempty (Map.lookup y e)
+    go deps [] = deps
+    go deps (y:ys)
+      | y `Set.member` deps = go deps ys
+      | otherwise = go (Set.insert y deps) (ys ++ Set.toList (fromMaybe mempty $ Map.lookup y e))
 
 -- | Take the transitive closure of the graph
 transitiveClosure :: Ord node => Graph node -> Graph node
@@ -133,10 +169,11 @@ topsort gr@(Graph e _) = go [] e
             else Left . concat . take 1 . sortOn length . filter (not . null) . map (findCycle gr) $ Map.keys e
 
 -- | Simple DFS cycle finding
--- TODO: tests for this, currently it can produce a stem with a cycle after it
 findCycle :: Ord node => Graph node -> node -> [node]
-findCycle (Graph e _) node = concat . take 1 $ go mempty node
+findCycle g@(Graph e _) node = concat . take 1 $ filter loopy $ go mempty node
   where
+    loopy [] = False
+    loopy c@(x:_) = dependsOn (last c) x g
     go seen n
       | n `Set.member` seen = [[]]
       | otherwise = do
