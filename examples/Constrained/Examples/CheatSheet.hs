@@ -364,7 +364,7 @@ tightFit0 = constrained' $ \x y ->
 --         TypeSpec (Cartesian TrueSpec (MemberSpec [0])) []
 --         ---
 --         assert $ Equal (Fst (ToGeneric v_3)) v_1
---   Env {unEnv = fromList [(v_0,EnvValue 0)]}
+--   Env (fromList [(v_0,EnvValue 0)])
 -- genFromSpecT ErrorSpec{} with explanation:
 -- [1..-1]
 
