@@ -244,6 +244,9 @@ instance HasSpec a => HasSpec [a] where
   shrinkWithTypeSpec (ListSpec _ _ _ es _) as =
     shrinkList (shrinkWithSpec es) as
 
+  -- TODO: fixme
+  fixupWithTypeSpec _ _ = Nothing
+
   cardinalTypeSpec _ = TrueSpec
 
   guardTypeSpec = guardListSpec
