@@ -101,10 +101,6 @@ import Constrained.GenT
 import Constrained.Generic
 import Constrained.List hiding (toList)
 import Constrained.TypeErrors
-import Control.Monad.Writer (
-  Writer,
-  tell,
- )
 import Data.Foldable (
   toList,
  )
@@ -523,12 +519,6 @@ class
   -- This lets each HasSpec instance decide. Particulary useful for type Sum and Prod
   alternateShow :: TypeSpec a -> BinaryShow
   alternateShow _ = NonBinary
-
-  monadConformsTo :: a -> TypeSpec a -> Writer [String] Bool
-  monadConformsTo x spec =
-    if conformsTo @a x spec
-      then pure True
-      else tell ["Fails by " ++ show spec] >> pure False
 
   -- | For some types (especially finite ones) there may be much better ways to construct
   --   a Specification than the default method of just adding a large 'bad' list to TypSpec. This
