@@ -167,9 +167,9 @@ shrinkFromPreds :: HasSpec a => Pred -> Var a -> a -> [a]
 shrinkFromPreds p
   | Result plan <- prepareLinearization p = \x a -> listFromGE $ do
       -- NOTE: we do this to e.g. guard against bad construction functions in Exists
-      xaGood <- checkPred (Env.singleton x a) p
-      unless xaGood $
-        fatalError "Trying to shrink a bad value, don't do that!"
+      case checkPredE (Env.singleton x a) (NE.fromList []) p of
+        Nothing -> pure ()
+        Just err -> explainNE err $ fatalError "Trying to shrink a bad value, don't do that!"
       -- Get an `env` for the original value
       initialEnv <- envFromPred (Env.singleton x a) p
       return
