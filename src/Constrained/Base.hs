@@ -101,10 +101,6 @@ import Constrained.GenT
 import Constrained.Generic
 import Constrained.List hiding (toList)
 import Constrained.TypeErrors
-import Control.Monad.Writer (
-  Writer,
-  tell,
- )
 import Data.Foldable (
   toList,
  )
@@ -492,6 +488,12 @@ class
   -- | Shrink an `a` with the aide of a `TypeSpec`
   shrinkWithTypeSpec :: TypeSpec a -> a -> [a]
 
+  -- | Try to make an `a` conform to `TypeSpec` with minimal changes. When
+  -- `fixupWithSpec ts a` returns `Just a'`, it should be the case that
+  -- `conformsTo a' ts`. There are no constraints in the `Nothing` case. A
+  -- non-trivial implementation of this function is important for shrinking.
+  fixupWithTypeSpec :: TypeSpec a -> a -> Maybe a
+
   -- | Convert a spec to predicates:
   -- The key property here is:
   --   ∀ a. a `conformsTo` spec == a `conformsTo` constrained (\t -> toPreds t spec)
@@ -523,12 +525,6 @@ class
   -- This lets each HasSpec instance decide. Particulary useful for type Sum and Prod
   alternateShow :: TypeSpec a -> BinaryShow
   alternateShow _ = NonBinary
-
-  monadConformsTo :: a -> TypeSpec a -> Writer [String] Bool
-  monadConformsTo x spec =
-    if conformsTo @a x spec
-      then pure True
-      else tell ["Fails by " ++ show spec] >> pure False
 
   -- | For some types (especially finite ones) there may be much better ways to construct
   --   a Specification than the default method of just adding a large 'bad' list to TypSpec. This
@@ -608,6 +604,13 @@ class
     [a]
   shrinkWithTypeSpec spec a = map fromSimpleRep $ shrinkWithTypeSpec spec (toSimpleRep a)
 
+  default fixupWithTypeSpec ::
+    GenericallyInstantiated a =>
+    TypeSpec a ->
+    a ->
+    Maybe a
+  fixupWithTypeSpec spec a = fromSimpleRep <$> fixupWithTypeSpec spec (toSimpleRep a)
+
   default cardinalTypeSpec ::
     GenericallyInstantiated a =>
     TypeSpec a ->
@@ -628,6 +631,7 @@ instance HasSpec Bool where
   cardinalTypeSpec _ = equalSpec 2
   cardinalTrueSpec = equalSpec 2
   shrinkWithTypeSpec _ = shrink
+  fixupWithTypeSpec _ = Just
   conformsTo _ _ = True
   toPreds _ _ = TruePred
 
@@ -637,6 +641,7 @@ instance HasSpec () where
   combineSpec _ _ = typeSpec ()
   _ `conformsTo` _ = True
   shrinkWithTypeSpec _ _ = []
+  fixupWithTypeSpec _ _ = pure ()
   genFromTypeSpec _ = pure ()
   toPreds _ _ = TruePred
   cardinalTypeSpec _ = MemberSpec (pure 1)

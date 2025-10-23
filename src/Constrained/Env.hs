@@ -27,7 +27,7 @@ import Prettyprinter
 import Prelude hiding (lookup)
 
 -- | Typed environments for mapping @t`Var` a@ to @a@
-newtype Env = Env {unEnv :: Map EnvKey EnvValue}
+newtype Env = Env (Map EnvKey EnvValue)
   deriving newtype (Semigroup, Monoid)
   deriving stock (Show)
 

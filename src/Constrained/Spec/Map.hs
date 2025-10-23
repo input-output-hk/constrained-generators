@@ -278,6 +278,8 @@ instance
 
   shrinkWithTypeSpec (MapSpec _ _ _ _ kvs _) m = map Map.fromList $ shrinkList (shrinkWithSpec kvs) (Map.toList m)
 
+  fixupWithTypeSpec _ _ = Nothing
+
   toPreds m (MapSpec mHint mustKeys mustVals size kvs foldSpec) =
     toPred
       [ Assert $ Lit mustKeys `subset_` dom_ m

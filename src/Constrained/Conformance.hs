@@ -14,7 +14,7 @@ module Constrained.Conformance (
   conformsToSpec,
   conformsToSpecE,
   satisfies,
-  checkPred,
+  checkPredE,
   checkPredsE,
 ) where
 
@@ -34,59 +34,9 @@ import Data.Semigroup (sconcat)
 import Prettyprinter hiding (cat)
 import Test.QuickCheck (Property, Testable, property)
 
--- =========================================================================
-
--- | Does the Pred evaluate to true under the given Env.
---   If it doesn't, some explanation appears in the failure of the monad 'm'
-checkPred :: forall m. MonadGenError m => Env -> Pred -> m Bool
-checkPred env = \case
-  p@(ElemPred bool term xs) -> do
-    v <- runTerm env term
-    case (elem v xs, bool) of
-      (True, True) -> pure True
-      (True, False) -> fatalErrorNE ("notElemPred reduces to True" :| [show p])
-      (False, True) -> fatalErrorNE ("elemPred reduces to False" :| [show p])
-      (False, False) -> pure True
-  Monitor {} -> pure True
-  Subst x t p -> checkPred env $ substitutePred x t p
-  Assert t -> runTerm env t
-  GenHint {} -> pure True
-  p@(Reifies t' t f) -> do
-    val <- runTerm env t
-    val' <- runTerm env t'
-    explainNE (NE.fromList ["Reification:", "  " ++ show p]) $ pure (f val == val')
-  ForAll t (x :-> p) -> do
-    set <- runTerm env t
-    and
-      <$> sequence
-        [ checkPred env' p
-        | v <- forAllToList set
-        , let env' = Env.extend x v env
-        ]
-  Case t bs -> do
-    v <- runTerm env t
-    runCaseOn v (mapList thing bs) (\x val ps -> checkPred (Env.extend x val env) ps)
-  When bt p -> do
-    b <- runTerm env bt
-    if b then checkPred env p else pure True
-  TruePred -> pure True
-  FalsePred es -> explainNE es $ pure False
-  DependsOn {} -> pure True
-  And ps -> checkPreds env ps
-  Let t (x :-> p) -> do
-    val <- runTerm env t
-    checkPred (Env.extend x val env) p
-  Exists k (x :-> p) -> do
-    a <- runGE $ k (errorGE . explain "checkPred: Exists" . runTerm env)
-    checkPred (Env.extend x a env) p
-  Explain es p -> explainNE es $ checkPred env p
-
-checkPreds :: (MonadGenError m, Traversable t) => Env -> t Pred -> m Bool
-checkPreds env ps = and <$> mapM (checkPred env) ps
-
 -- ==========================================================
 
--- | Like checkPred, But it takes [Pred] rather than a single Pred,
+-- | Like checkPredE, But it takes [Pred] rather than a single Pred,
 --   and it builds a much more involved explanation if it fails.
 --   Does the Pred evaluate to True under the given Env?
 --   If it doesn't, an involved explanation appears in the (Just message)
@@ -101,8 +51,9 @@ checkPredsE msgs env ps =
     [] -> Nothing
     (x : xs) -> Just (NE.nub (sconcat (x NE.:| xs)))
 
--- | An involved explanation for a single Pred
---   The most important explanations come when an assertion fails.
+-- | Does the Pred evaluate to true under the given Env. An involved
+-- explanation for a single Pred in case of failure and `Nothing` otherwise.
+-- The most important explanations come when an assertion fails.
 checkPredE :: Env -> NE.NonEmpty String -> Pred -> Maybe (NE.NonEmpty String)
 checkPredE env msgs = \case
   p@(ElemPred bool t xs) ->

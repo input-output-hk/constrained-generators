@@ -76,6 +76,8 @@ instance HasSpec a => HasSpec (BinTree a) where
       : (BinNode left a <$> shrinkWithTypeSpec s right)
       ++ ((\l -> BinNode l a right) <$> shrinkWithTypeSpec s left)
 
+  fixupWithTypeSpec _ _ = Nothing
+
   cardinalTypeSpec _ = mempty
 
   toPreds t (BinTreeSpec msz s) =

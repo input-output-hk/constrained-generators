@@ -2,3 +2,5 @@ snapshot: lts-22.44
 packages:
 - .
 system-ghc: true
+extra-deps:
+- QuickCheck-2.15.0.1
