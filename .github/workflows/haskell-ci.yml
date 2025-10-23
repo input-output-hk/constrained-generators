@@ -37,6 +37,8 @@ jobs:
     steps:
       - name: Set NIGHTLY environment variable if the job was triggered by the scheduler
         if: "${{ github.event_name == 'schedule'
+              || contains(github.event.pull_request.title, 'nightly')
+              || contains(github.event.pull_request.title, 'NIGHTLY')
               || github.event_name == 'workflow_dispatch' && github.event.inputs.nightly }}"
         run: |
           echo "NIGHTLY=true" >> $GITHUB_ENV
@@ -64,6 +66,8 @@ jobs:
     steps:
       - name: Set NIGHTLY environment variable if the job was triggered by the scheduler
         if: "${{ github.event_name == 'schedule'
+              || contains(github.event.pull_request.title, 'nightly')
+              || contains(github.event.pull_request.title, 'NIGHTLY')
               || github.event_name == 'workflow_dispatch' && github.event.inputs.nightly }}"
         run: |
           echo "NIGHTLY=true" >> $GITHUB_ENV
