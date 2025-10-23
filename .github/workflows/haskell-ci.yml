@@ -11,6 +11,12 @@ on:
       - 'master'
   schedule:
     - cron: 0 0 * * *
+  workflow_dispatch:
+    inputs:
+      nightly:
+        description: Run with the same settings as a nightly build
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -29,9 +35,12 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Set NIGHTLY environment variable if scheduled
-        if: github.event_name == 'schedule'
-        run: echo "NIGHTLY=1" >> $GITHUB_ENV
+      - name: Set NIGHTLY environment variable if the job was triggered by the scheduler
+        if: "${{ github.event_name == 'schedule'
+              || github.event_name == 'workflow_dispatch' && github.event.inputs.nightly }}"
+        run: |
+          echo "NIGHTLY=true" >> $GITHUB_ENV
+
       - uses: actions/checkout@v4
       - uses: haskell-actions/setup@v2
         with:
@@ -53,9 +62,12 @@ jobs:
     name: Stack
     runs-on: ubuntu-latest
     steps:
-      - name: Set NIGHTLY environment variable if scheduled
-        if: github.event_name == 'schedule'
-        run: echo "NIGHTLY=1" >> $GITHUB_ENV
+      - name: Set NIGHTLY environment variable if the job was triggered by the scheduler
+        if: "${{ github.event_name == 'schedule'
+              || github.event_name == 'workflow_dispatch' && github.event.inputs.nightly }}"
+        run: |
+          echo "NIGHTLY=true" >> $GITHUB_ENV
+
       - uses: actions/checkout@v4
 
       - uses: haskell-actions/setup@v2
