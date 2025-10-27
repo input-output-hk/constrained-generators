@@ -39,6 +39,7 @@ module Constrained.NumOrd (
   combineNumSpec,
   genFromNumSpec,
   shrinkWithNumSpec,
+  fixupWithTypeSpec,
   conformsToNumSpec,
   toPredsNumSpec,
   OrdLike (..),
@@ -319,6 +320,11 @@ genFromNumSpec (NumSpecInterval ml mu) = do
 -- | Try to shrink using a `NumSpec`
 shrinkWithNumSpec :: Arbitrary n => NumSpec n -> n -> [n]
 shrinkWithNumSpec _ = shrink
+
+-- TODO: fixme
+
+fixupWithNumSpec :: Arbitrary n => NumSpec n -> n -> Maybe n
+fixupWithNumSpec _ = listToMaybe . shrink
 
 constrainInterval ::
   (MonadGenError m, Ord a, Num a, Show a) => Maybe a -> Maybe a -> Integer -> m (a, a)
@@ -1073,6 +1079,7 @@ instance HasSpec Integer where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec = fixupWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalNumSpec
@@ -1084,6 +1091,7 @@ instance HasSpec Int where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec = fixupWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalNumSpec
@@ -1095,6 +1103,7 @@ instance HasSpec (Ratio Integer) where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec = fixupWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec _ = TrueSpec
@@ -1106,6 +1115,7 @@ instance HasSpec Natural where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec = fixupWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec (NumSpecInterval (fromMaybe 0 -> lo) (Just hi)) =
@@ -1121,6 +1131,7 @@ instance HasSpec Word8 where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec = fixupWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalNumSpec
@@ -1134,6 +1145,7 @@ instance HasSpec Word16 where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec = fixupWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalNumSpec
@@ -1146,6 +1158,7 @@ instance HasSpec Word32 where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec = fixupWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalNumSpec
@@ -1157,6 +1170,7 @@ instance HasSpec Word64 where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec = fixupWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalNumSpec
@@ -1168,6 +1182,7 @@ instance HasSpec Int8 where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec = fixupWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTrueSpec = equalSpec 256
@@ -1180,6 +1195,7 @@ instance HasSpec Int16 where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec = fixupWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalNumSpec
@@ -1192,6 +1208,7 @@ instance HasSpec Int32 where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec = fixupWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalNumSpec
@@ -1203,6 +1220,7 @@ instance HasSpec Int64 where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec = fixupWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalNumSpec
@@ -1214,6 +1232,7 @@ instance HasSpec Float where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec = fixupWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec _ = TrueSpec
@@ -1225,6 +1244,7 @@ instance HasSpec Double where
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
   shrinkWithTypeSpec = shrinkWithNumSpec
+  fixupWithTypeSpec = fixupWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec _ = TrueSpec

@@ -14,6 +14,7 @@ module Constrained.Conformance (
   conformsToSpec,
   conformsToSpecE,
   satisfies,
+  checkPredE,
   checkPredsE,
 ) where
 

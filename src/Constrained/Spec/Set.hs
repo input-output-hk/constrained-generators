@@ -204,6 +204,9 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
 
   shrinkWithTypeSpec (SetSpec _ es _) as = map Set.fromList $ shrinkList (shrinkWithSpec es) (Set.toList as)
 
+  -- TODO: fixme
+  fixupWithTypeSpec _ _ = Nothing
+
   toPreds s (SetSpec m es size) =
     fold $
       -- Don't include this if the must set is empty
