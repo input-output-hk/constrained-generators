@@ -148,42 +148,48 @@ genFromSpecWithSeed seed size spec = unGen (genFromSpec spec) (mkQCGen seed) siz
 
 -- ----------------------- Shrinking -------------------------------
 
+unconstrainedShrink :: forall a. HasSpec a => a -> [a]
+unconstrainedShrink = shrinkWithTypeSpec (emptySpec @a)
+
 -- | Shrink a value while preserving adherence to a `Specification`
 shrinkWithSpec :: forall a. HasSpec a => Specification a -> a -> [a]
--- TODO: possibly allow for ignoring the `conformsToSpec` check in the `TypeSpec`
--- case when you know what you're doing
-shrinkWithSpec (simplifySpec -> spec) a = filter (`conformsToSpec` spec) $ case spec of
-  ExplainSpec _ s -> shrinkWithSpec s a
-  -- TODO: filter on can't if we have a known to be sound shrinker
-  TypeSpec s _ -> shrinkWithTypeSpec s a
-  SuspendedSpec x p -> shrinkFromPreds p x a ++ shr a
-  MemberSpec {} -> shr a
-  TrueSpec -> shr a
+shrinkWithSpec (ExplainSpec _ s) a = shrinkWithSpec s a
+shrinkWithSpec (simplifySpec -> spec) a = case spec of
+  -- TODO: It would be nice to avoid the extra `conformsToSpec` check here and only look
+  -- at the cant set instead
+  TypeSpec s _ -> [ a' | a' <- shrinkWithTypeSpec s a, a' `conformsToSpec` spec ]
+  SuspendedSpec x p -> shrinkFromPreds p x a
+  -- TODO: it would be nice if there was some better way of doing this
+  MemberSpec as -> [ a' | a' <- unconstrainedShrink a, a' `elem` as ]
+  TrueSpec -> unconstrainedShrink a
   ErrorSpec {} -> []
-  where
-    shr = shrinkWithTypeSpec (emptySpec @a)
+  -- Should be impossible?
+  ExplainSpec _ s -> shrinkWithSpec s a
 
-shrinkFromPreds :: HasSpec a => Pred -> Var a -> a -> [a]
+shrinkFromPreds :: forall a. HasSpec a => Pred -> Var a -> a -> [a]
 shrinkFromPreds p
   | Result plan <- prepareLinearization p = \x a -> listFromGE $ do
       -- NOTE: we do this to e.g. guard against bad construction functions in Exists
       case checkPredE (Env.singleton x a) (NE.fromList []) p of
         Nothing -> pure ()
         Just err -> explainNE err $ fatalError "Trying to shrink a bad value, don't do that!"
-      -- Get an `env` for the original value
-      initialEnv <- envFromPred (Env.singleton x a) p
-      return
-        [ a'
-        | -- Shrink the initialEnv
-        env' <- shrinkEnvFromPlan initialEnv plan
-        , -- Get the value of the constrained variable `x` in the shrunk env
-        Just a' <- [Env.lookup env' x]
-        , -- NOTE: this is necessary because it's possible that changing
-        -- a particular value in the env during shrinking might not result
-        -- in the value of `x` changing and there is no better way to know than
-        -- to do this.
-        a' /= a
-        ]
+      if not $ Name x `appearsIn` p -- NOTE: this is safe because we just checked that p is SAT above
+      then return $ unconstrainedShrink a
+      else do
+        -- Get an `env` for the original value
+        initialEnv <- envFromPred (Env.singleton x a) p
+        return
+          [ a'
+          | -- Shrink the initialEnv
+          env' <- shrinkEnvFromPlan initialEnv plan
+          , -- Get the value of the constrained variable `x` in the shrunk env
+          Just a' <- [Env.lookup env' x]
+          , -- NOTE: this is necessary because it's possible that changing
+          -- a particular value in the env during shrinking might not result
+          -- in the value of `x` changing and there is no better way to know than
+          -- to do this.
+          a' /= a
+          ]
   | otherwise = error "Bad pred"
 
 -- Start with a valid Env for the plan and try to shrink it
