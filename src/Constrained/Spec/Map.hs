@@ -185,7 +185,6 @@ instance
                 ]
         n <- genFromSpecT size'
         let go 0 _ m = pure m
-            -- go n' ((\ s -> trace (show s) s) -> kvs') m = do
             go n' kvs' m = do
               mkv <- inspect $ genFromSpecT kvs'
               case mkv of
