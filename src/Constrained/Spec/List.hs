@@ -274,6 +274,7 @@ randomInterleaving xs ys = go xs ys (length ys)
     go [] ys _ = pure ys
     go xs [] _ = pure xs
     go xs ys l = do
+      -- TODO: think about distribution here
       i <- choose (0, l)
       go' i xs ys (l - i)
 
@@ -281,11 +282,6 @@ randomInterleaving xs ys = go xs ys (length ys)
     go' _ [] ys _ = pure ys
     go' 0 (x:xs) ys l = (x:) <$> go xs ys l
     go' i xs (y:ys) l = (y:) <$> go' (i-1) xs ys l
-
-genSplit :: [a] -> Gen ([a], [a])
-genSplit as = do
-  s <- choose (0, length as)
-  return $ splitAt s as
 
 instance HasSpec a => HasGenHint [a] where
   type Hint [a] = Integer
