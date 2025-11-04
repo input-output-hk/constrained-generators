@@ -13,6 +13,7 @@ import Constrained.API
 import Constrained.Generation
 import Constrained.Examples.Set
 import Constrained.Examples.Map
+import Constrained.Examples.Basic
 
 import Control.DeepSeq
 import Criterion
@@ -37,6 +38,7 @@ benchmarks =
     , benchSpec 10 30 "maybeJustSetSpec" maybeJustSetSpec
     , benchSpec 10 40 "eitherKeys" eitherKeys
     , benchSimplifySpec "eitherKeys" eitherKeys
+    , benchSpec 10 40 "chooseBackwards" chooseBackwards'
     ]
 
 roseTreeMaybe :: Specification (Tree (Maybe (Int, Int)))
