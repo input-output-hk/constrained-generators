@@ -179,12 +179,13 @@ instance
               fold
                 [ maybe TrueSpec (leqSpec . max 0) mHint
                 , size
-                , maxSpec (cardinality (fstSpec kvs)) -- (mapSpec FstW  (mapSpec ToGenericW kvs)))
+                , maxSpec (cardinality (fstSpec kvs))
                 , maxSpec (cardinalTrueSpec @k)
                 , geqSpec 0
                 ]
         n <- genFromSpecT size'
         let go 0 _ m = pure m
+            -- go n' ((\ s -> trace (show s) s) -> kvs') m = do
             go n' kvs' m = do
               mkv <- inspect $ genFromSpecT kvs'
               case mkv of
