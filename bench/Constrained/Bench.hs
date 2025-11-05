@@ -10,6 +10,7 @@
 module Constrained.Bench where
 
 import Constrained.API
+import Constrained.Generation
 import Control.DeepSeq
 import Criterion
 import Data.Map (Map)
@@ -30,7 +31,11 @@ benchmarks =
         (giveHint (Nothing, 30) <> trueSpec :: Specification (Tree Int))
     , benchSpec 10 30 "roseTreeMaybe" roseTreeMaybe
     , benchSpec 10 30 "listSumPair" listSumPair
+    , benchSpec 10 30 "intSpec" (simplifySpec intSpecSimple)
     ]
+
+intSpecSimple :: Specification Int
+intSpecSimple = constrained $ \ x -> 0 <. x
 
 roseTreeMaybe :: Specification (Tree (Maybe (Int, Int)))
 roseTreeMaybe = constrained $ \t ->

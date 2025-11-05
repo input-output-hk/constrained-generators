@@ -28,6 +28,7 @@ module Constrained.GenT (
   tryGenT,
   chooseT,
   sizeT,
+  sizedT,
   withMode,
   frequencyT,
   oneofT,
@@ -109,7 +110,9 @@ data GenMode
 -- | A `Gen` monad wrapper that allows different generation modes and different
 -- failure types.
 newtype GenT m a = GenT {runGenT :: GenMode -> [NonEmpty String] -> Gen (m a)}
-  deriving (Functor)
+
+instance Functor f => Functor (GenT f) where
+  fmap f (GenT k) = GenT $ \ mode msgs -> fmap (fmap f) (k mode msgs)
 
 instance Monad m => Applicative (GenT m) where
   pure a = GenT (\_ _ -> pure @Gen (pure @m a))
@@ -388,7 +391,11 @@ chooseT (a, b)
 
 -- | Get the size provided to the generator
 sizeT :: Monad m => GenT m Int
-sizeT = GenT $ \mode msgs -> sized $ \n -> runGenT (pure n) mode msgs
+sizeT = sizedT pure
+
+-- | Get the size provided to the generator
+sizedT :: (Int -> GenT m a) -> GenT m a
+sizedT c = GenT $ \mode msgs -> sized $ \n -> runGenT (c n) mode msgs
 
 -- ==================================================================
 -- Reflective analysis of the internal GE structure of (GenT GE x)
@@ -397,27 +404,23 @@ sizeT = GenT $ \mode msgs -> sized $ \n -> runGenT (pure n) mode msgs
 
 -- | Always succeeds, but returns the internal GE structure for analysis
 inspect :: forall m x. MonadGenError m => GenT GE x -> GenT m (GE x)
-inspect (GenT f) = GenT g
-  where
-    g mode msgs = do geThing <- f mode msgs; pure @Gen (pure @m geThing)
+inspect (GenT f) = GenT (\ mode msgs -> pure <$> f mode msgs)
 
 -- | Ignore all kinds of Errors, by squashing them into Nothing
 tryGenT :: MonadGenError m => GenT GE a -> GenT m (Maybe a)
-tryGenT g = do
-  r <- inspect g
-  case r of
-    FatalError _ -> pure Nothing
-    GenError _ -> pure Nothing
-    Result a -> pure $ Just a
+tryGenT g = cont <$> inspect g
+  where cont r = case r of
+          FatalError _ -> Nothing
+          GenError _ -> Nothing
+          Result a -> Just a
 
 -- Pass on the error messages of both kinds of Errors, by squashing and combining both of them into Left constructor
 catchGenT :: MonadGenError m => GenT GE a -> GenT m (Either (NonEmpty (NonEmpty String)) a)
-catchGenT g = do
-  r <- inspect g
-  case r of
-    FatalError es -> pure $ Left es
-    GenError es -> pure $ Left es
-    Result a -> pure $ Right a
+catchGenT g = cont <$> inspect g
+  where cont r = case r of
+          FatalError es -> Left es
+          GenError es -> Left es
+          Result a -> Right a
 
 -- | Pass on the error messages of both kinds of Errors in the Gen (not the GenT) monad
 catchGen :: GenT GE a -> Gen (Either (NonEmpty (NonEmpty String)) a)
