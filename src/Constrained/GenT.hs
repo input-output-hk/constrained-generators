@@ -110,7 +110,9 @@ data GenMode
 -- | A `Gen` monad wrapper that allows different generation modes and different
 -- failure types.
 newtype GenT m a = GenT {runGenT :: GenMode -> [NonEmpty String] -> Gen (m a)}
-  deriving (Functor)
+
+instance Functor f => Functor (GenT f) where
+  fmap f (GenT k) = GenT $ \ mode msgs -> fmap (fmap f) (k mode msgs)
 
 instance Monad m => Applicative (GenT m) where
   pure a = GenT (\_ _ -> pure @Gen (pure @m a))

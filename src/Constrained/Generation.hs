@@ -128,7 +128,7 @@ genFromSpecT (simplifySpec -> spec) = case spec of
 
 -- | A version of `genFromSpecT` that simply errors if the generator fails
 genFromSpec :: forall a. (HasCallStack, HasSpec a) => Specification a -> Gen a
-genFromSpec spec = either (error . ('\n' :) . catMessages) id <$> catchGen (genFromSpecT @a @GE spec)
+genFromSpec spec = genFromGenT (genFromSpecT @a @GE spec)
 
 -- | A version of `genFromSpecT` that takes a seed and a size and gives you a result
 genFromSpecWithSeed ::
