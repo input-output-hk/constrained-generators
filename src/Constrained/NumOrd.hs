@@ -313,7 +313,8 @@ genFromNumSpec ::
   GenT m n
 genFromNumSpec (NumSpecInterval ml mu) = do
   n <- sizeT
-  pureGen . choose =<< constrainInterval (ml <|> lowerBound) (mu <|> upperBound) (fromIntegral n)
+  interval <- constrainInterval (ml <|> lowerBound) (mu <|> upperBound) (fromIntegral n)
+  pureGen $ choose interval
 
 -- TODO: fixme
 
@@ -326,6 +327,7 @@ shrinkWithNumSpec _ = shrink
 fixupWithNumSpec :: Arbitrary n => NumSpec n -> n -> Maybe n
 fixupWithNumSpec _ = listToMaybe . shrink
 
+{-# SCC constrainInterval #-}
 constrainInterval ::
   (MonadGenError m, Ord a, Num a, Show a) => Maybe a -> Maybe a -> Integer -> m (a, a)
 constrainInterval ml mu r =
@@ -336,11 +338,11 @@ constrainInterval ml mu r =
       | otherwise -> pure (l, l + 2 * r')
     (Nothing, Just u)
       | u > 0 -> pure (negate r', min u r')
-      | otherwise -> pure (u - r' - r', u)
+      | otherwise -> pure (u - 2 * r', u)
     (Just l, Just u)
       | l > u -> genError ("bad interval: " ++ show l ++ " " ++ show u)
       | u < 0 -> pure (safeSub l (safeSub l u r') r', u)
-      | l >= 0 -> pure (l, safeAdd u (safeAdd u l r') r')
+      | l >= 0 -> pure (l, safeAdd u l r')
       -- TODO: this is a bit suspect if the bounds are lopsided
       | otherwise -> pure (max l (-r'), min u r')
   where
@@ -348,9 +350,8 @@ constrainInterval ml mu r =
     safeSub l a b
       | a - b > a = l
       | otherwise = max l (a - b)
-    safeAdd u a b
-      | a + b < a = u
-      | otherwise = min u (a + b)
+    safeAdd u a b =
+      let ab = a + b in if ab < a then u else min u ab
 
 -- | Check that a value is in the spec
 conformsToNumSpec :: Ord n => n -> NumSpec n -> Bool

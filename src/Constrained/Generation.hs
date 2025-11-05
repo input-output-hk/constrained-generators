@@ -132,7 +132,9 @@ genFromSpecT (simplifySpec -> spec) = case spec of
       $
       -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
       -- starts giving us trouble.
-      genFromTypeSpec s `suchThatT` (`notElem` cant)
+      case cant of
+        [] -> genFromTypeSpec s
+        _  -> genFromTypeSpec s `suchThatT` (`notElem` cant)
   ErrorSpec e -> genErrorNE e
 
 -- | A version of `genFromSpecT` that simply errors if the generator fails
