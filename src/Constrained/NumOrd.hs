@@ -313,8 +313,9 @@ genFromNumSpec ::
   GenT m n
 genFromNumSpec (NumSpecInterval ml mu) = do
   n <- sizeT
-  interval <- constrainInterval (ml <|> lowerBound) (mu <|> upperBound) (fromIntegral n)
-  pureGen $ choose interval
+  case constrainInterval (ml <|> lowerBound) (mu <|> upperBound) (fromIntegral n) of
+    Just interval -> pureGen $ choose interval
+    Nothing -> genError $ "bad interval: " ++ show ml ++ " " ++ show mu
 
 -- TODO: fixme
 
@@ -329,7 +330,7 @@ fixupWithNumSpec _ = listToMaybe . shrink
 
 {-# SCC constrainInterval #-}
 constrainInterval ::
-  (MonadGenError m, Ord a, Num a, Show a) => Maybe a -> Maybe a -> Integer -> m (a, a)
+  (Ord a, Num a) => Maybe a -> Maybe a -> Integer -> Maybe (a, a)
 constrainInterval ml mu r =
   case (ml, mu) of
     (Nothing, Nothing) -> pure (-r', r')
@@ -340,7 +341,7 @@ constrainInterval ml mu r =
       | u > 0 -> pure (negate r', min u r')
       | otherwise -> pure (u - 2 * r', u)
     (Just l, Just u)
-      | l > u -> genError ("bad interval: " ++ show l ++ " " ++ show u)
+      | l > u -> Nothing
       | u < 0 -> pure (safeSub l (safeSub l u r') r', u)
       | l >= 0 -> pure (l, safeAdd u l r')
       -- TODO: this is a bit suspect if the bounds are lopsided

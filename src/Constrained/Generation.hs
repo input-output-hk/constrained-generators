@@ -119,29 +119,16 @@ genFromSpecT (simplifySpec -> spec) = case spec of
         env <- genFromPreds mempty p
         Env.find env x
   TypeSpec s cant -> do
-    mode <- getMode
-    explainNE
-      ( NE.fromList
-          [ "genFromSpecT on (TypeSpec tspec cant) at type " ++ showType @a
-          , "tspec = "
-          , show s
-          , "cant = " ++ show cant
-          , "with mode " ++ show mode
-          ]
-      )
-      $
-      -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
-      -- starts giving us trouble.
-      case cant of
-        [] -> genFromTypeSpec s
-        _  -> genFromTypeSpec s `suchThatT` (`notElem` cant)
+    -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
+    -- starts giving us trouble.
+    case cant of
+      [] -> genFromTypeSpec s
+      _  -> genFromTypeSpec s `suchThatT` (`notElem` cant)
   ErrorSpec e -> genErrorNE e
 
 -- | A version of `genFromSpecT` that simply errors if the generator fails
 genFromSpec :: forall a. (HasCallStack, HasSpec a) => Specification a -> Gen a
-genFromSpec spec = do
-  res <- catchGen $ genFromSpecT @a @GE spec
-  either (error . ('\n' :) . catMessages) pure res
+genFromSpec spec = either (error . ('\n' :) . catMessages) id <$> catchGen (genFromSpecT @a @GE spec)
 
 -- | A version of `genFromSpecT` that takes a seed and a size and gives you a result
 genFromSpecWithSeed ::
