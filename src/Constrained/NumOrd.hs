@@ -311,11 +311,11 @@ genFromNumSpec ::
   (MonadGenError m, Show n, Random n, Ord n, Num n, MaybeBounded n) =>
   NumSpec n ->
   GenT m n
-genFromNumSpec (NumSpecInterval ml mu) = do
-  n <- sizeT
-  case constrainInterval (ml <|> lowerBound) (mu <|> upperBound) (fromIntegral n) of
-    Just interval -> pureGen $ choose interval
-    Nothing -> genError $ "bad interval: " ++ show ml ++ " " ++ show mu
+genFromNumSpec (NumSpecInterval ml mu) =
+  sizedT $ \ n ->
+    case constrainInterval (ml <|> lowerBound) (mu <|> upperBound) (fromIntegral n) of
+      Just interval -> pureGen $ choose interval
+      Nothing -> genError $ "bad interval: " ++ show ml ++ " " ++ show mu
 
 -- TODO: fixme
 
