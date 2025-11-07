@@ -24,6 +24,7 @@ module Constrained.GenT (
   suchThatT,
   suchThatWithTryT,
   scaleT,
+  resizeT,
   firstGenT,
   tryGenT,
   chooseT,
@@ -34,7 +35,6 @@ module Constrained.GenT (
   vectorOfT,
   listOfUntilLenT,
   listOfT,
-  resizeT,
   strictGen,
   looseGen,
 
@@ -97,28 +97,31 @@ instance Monad GE where
 -- Strict gen monad
 ------------------------------------------------------------------------
 
-liftGenToStrict :: Gen a -> StrictGenT m a
+liftGenToStrict :: Monad m => Gen a -> StrictGenT m a
 liftGenToStrict g = StrictGen $ \seed size -> do
   let (seed', seed'') = split seed
   pure (seed'', unGen g seed' size)
 
-runStrictGen :: StrictGenT m a -> Gen (m a)
+runStrictGen :: Functor m => StrictGenT m a -> Gen (m a)
 runStrictGen g = MkGen $ \seed size -> do
   snd <$> unStrictGen g seed size
 
-strictGetSize :: StrictGenT m Int
+strictGetSize :: Applicative m => StrictGenT m Int
 strictGetSize = StrictGen $ \ seed size -> pure (seed, size)
+
+scaleStrict :: (Int -> Int) -> StrictGenT m a -> StrictGenT m a
+scaleStrict f sg = StrictGen $ \ seed size -> unStrictGen sg seed (f size)
 
 newtype StrictGenT m a = StrictGen { unStrictGen :: QCGen -> Int -> m (QCGen, a) }
 
-instance Functor (StrictGenT m) where
+instance Functor m => Functor (StrictGenT m) where
   fmap f (StrictGen g) = StrictGen $ \ seed size -> second f <$> g seed size
 
-instance Applicative (StrictGenT m) where
+instance Monad m => Applicative (StrictGenT m) where
   pure a = StrictGen $ \ seed _ -> pure (seed, a)
   (<*>) = ap
 
-instance Monad (StrictGenT m) where
+instance Monad m => Monad (StrictGenT m) where
   StrictGen g >>= k = StrictGen $ \ seed size -> do
     (seed', a) <- g seed size
     unStrictGen (k a) seed' size
@@ -210,7 +213,7 @@ instance MonadGenError m => MonadGenError (GenT m) where
   fatalErrors es = GenT $ \_ xs -> lift $ fatalErrors (cat es xs)
 
   -- Perhaps we want to turn fatalError into genError, if mode_ is Loose?
-  explainNE e (GenT f) = GenT $ \mode es -> explainNE e $ f mode es
+  explainNE e (GenT f) = GenT $ \mode es -> StrictGen $ \ seed size -> explainNE e $ unStrictGen (f mode es) seed size
 
 -- ====================================================
 -- useful operations on NonEmpty
@@ -304,11 +307,11 @@ listFromGE = fromGE (const []) . explain "listFromGE"
 -- Useful operations on GenT
 
 -- | Run a t`GenT` generator in `Strict` mode
-strictGen :: GenT m a -> Gen (m a)
+strictGen :: Functor m => GenT m a -> Gen (m a)
 strictGen genT = runStrictGen $ runGenT genT Strict []
 
 -- | Run a t`GenT` generator in `Loose` mode
-looseGen :: GenT m a -> Gen (m a)
+looseGen :: Functor m => GenT m a -> Gen (m a)
 looseGen genT = runStrictGen $ runGenT genT Loose []
 
 -- | Turn a t`GenT` generator into a `Gen` generator in `Strict` mode
@@ -316,7 +319,7 @@ genFromGenT :: GenT GE a -> Gen a
 genFromGenT genT = errorGE <$> strictGen genT
 
 -- | Turn a `Gen` generator into a t`GenT` generator that never fails.
-pureGen :: Applicative m => Gen a -> GenT m a
+pureGen :: Monad m => Gen a -> GenT m a
 pureGen gen = GenT $ \_ _ -> liftGenToStrict gen
 
 -- | Lift `listOf` to t`GenT`
@@ -346,7 +349,7 @@ listOfUntilLenT gen goalLen validLen =
 -- | Lift `vectorOf` to t`GenT`
 vectorOfT :: MonadGenError m => Int -> GenT GE a -> GenT m [a]
 vectorOfT i gen = GenT $ \mode _ -> do
-  res <- _ -- pureGen $ fmap sequence . vectorOf i $ runStrictGen $ runGenT gen Strict []
+  res <- liftGenToStrict $ fmap sequence . vectorOf i $ runStrictGen $ runGenT gen Strict []
   case mode of
     Strict -> lift $ runGE res
     Loose -> case res of
@@ -381,15 +384,19 @@ suchThatWithTryT tries g p = do
 
 -- | Lift `scale` to t`GenT`
 scaleT :: (Int -> Int) -> GenT m a -> GenT m a
-scaleT sc (GenT gen) = GenT $ \mode msgs -> scale sc $ gen mode msgs
+scaleT sc (GenT gen) = GenT $ \mode msgs -> scaleStrict sc $ gen mode msgs
+
+-- | Lift `resize` to t`GenT`
+resizeT :: Int -> GenT m a -> GenT m a
+resizeT = scaleT . const
 
 -- | Access the `GenMode` we are running in, useful to decide e.g.  if we want
 -- to re-try in case of a `GenError` or give up
-getMode :: Applicative m => GenT m GenMode
+getMode :: Monad m => GenT m GenMode
 getMode = GenT $ \mode _ -> pure mode
 
 -- | Get the current stack of `explain` above you
-getMessages :: Applicative m => GenT m [NonEmpty String]
+getMessages :: Monad m => GenT m [NonEmpty String]
 getMessages = GenT $ \_ msgs -> pure msgs
 
 -- | Locally change the generation mode
@@ -418,7 +425,7 @@ chooseT (a, b)
 
 -- | Get the size provided to the generator
 sizeT :: Monad m => GenT m Int
-sizeT = GenT $ \mode msgs -> strictGetSize
+sizeT = GenT $ \_ _ -> strictGetSize
 
 -- ==================================================================
 -- Reflective analysis of the internal GE structure of (GenT GE x)
