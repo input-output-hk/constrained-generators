@@ -130,7 +130,7 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
       ]
 
   genFromTypeSpec (SetSpec must e _)
-    | any (not . (`conformsToSpec` e)) must =
+    | not $ allConformToSpec must e =
         genErrorNE
           ( NE.fromList
               [ "Failed to generate set"
