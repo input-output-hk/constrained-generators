@@ -91,25 +91,20 @@ prop_topsort_sound g =
 
 prop_topsort_complete :: Graph Node -> Property
 prop_topsort_complete g =
-  isLeft (topsort g) === any (\ n -> not . null $ findCycle g n) (nodes g)
+  isLeft (topsort g) === not (null $ findCycle g)
 
 prop_find_cycle_sound :: Property
 prop_find_cycle_sound =
   forAllShrink (mkGraph @Node <$> arbitrary) shrink $ \ g ->
-    and [ all (\(x, y) -> dependsOn x y g) (zip c (drop 1 c))
-        | n <- Set.toList $ nodes g
-        , let c = findCycle g n
-        ]
+    let c = findCycle g
+    in counterexample (show c) $ all (\(x, y) -> dependsOn x y g) (zip c (drop 1 c))
 
 prop_find_cycle_loops :: Property
 prop_find_cycle_loops =
   forAllShrink (mkGraph @Node <$> arbitrary) shrink $ \ g ->
-    conjoin
-      [ case findCycle g n of
-          [] -> property True
-          c@(x:_) -> cover 40 True "found cycle" $ counterexample (show c) $ dependsOn (last c) x g
-      | n <- Set.toList $ nodes g
-      ]
+    case findCycle g of
+      [] -> property True
+      c@(x:_) -> cover 40 True "found cycle" $ counterexample (show c) $ dependsOn (last c) x g
 
 return []
 
