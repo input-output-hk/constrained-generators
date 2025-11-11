@@ -1,52 +1,53 @@
 {-# LANGUAGE PatternSynonyms #-}
 
--- | This module provides an API for extending the library with new function
--- symbols.
+{- | This module provides an API for extending the library with new function
+symbols.
+-}
 module Constrained.API.Extend (
-  -- * Abstract syntax
-  SpecificationD (..),
-  pattern TypeSpec,
-  PredD (..),
-  TermD (..),
-  BinderD (..),
+    -- * Abstract syntax
+    SpecificationD (..),
+    pattern TypeSpec,
+    PredD (..),
+    TermD (..),
+    BinderD (..),
 
-  -- * Implementing new functions
-  appTerm,
-  Semantics (..),
-  Syntax (..),
+    -- * Implementing new functions
+    appTerm,
+    Semantics (..),
+    Syntax (..),
 
-  -- ** The `Logic` instance
-  Logic (..),
-  HOLE (..),
-  pattern Unary,
-  pattern (:<:),
-  pattern (:>:),
+    -- ** The `Logic` instance
+    Logic (..),
+    HOLE (..),
+    pattern Unary,
+    pattern (:<:),
+    pattern (:>:),
 
-  -- ** Built-in 'TypeSpec's
-  PairSpec (..),
-  MapSpec (..),
-  SetSpec (..),
-  NumSpec (..),
-  TreeSpec (..),
+    -- ** Built-in 'TypeSpec's
+    PairSpec (..),
+    MapSpec (..),
+    SetSpec (..),
+    NumSpec (..),
+    TreeSpec (..),
 
-  -- * Generics
-  (:::),
-  SOP,
-  algebra,
-  inject,
+    -- * Generics
+    (:::),
+    SOP,
+    algebra,
+    inject,
 
-  -- * Building new `NumSpec`-based instances
-  emptyNumSpec,
-  cardinalNumSpec,
-  combineNumSpec,
-  genFromNumSpec,
-  shrinkWithNumSpec,
-  conformsToNumSpec,
-  toPredsNumSpec,
-  MaybeBounded (..),
+    -- * Building new `NumSpec`-based instances
+    emptyNumSpec,
+    cardinalNumSpec,
+    combineNumSpec,
+    genFromNumSpec,
+    shrinkWithNumSpec,
+    conformsToNumSpec,
+    toPredsNumSpec,
+    MaybeBounded (..),
 
-  -- * Re-export of `Constrained.API`
-  module Constrained.API,
+    -- * Re-export of `Constrained.API`
+    module Constrained.API,
 ) where
 
 import Constrained.API
