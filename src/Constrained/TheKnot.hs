@@ -33,31 +33,31 @@
 
 -- | All the things that are mutually recursive.
 module Constrained.TheKnot (
-    FunW (..),
-    ProdW (..),
-    SizeW (..),
-    PairSpec (..),
-    ifElse,
-    sizeOf_,
+  FunW (..),
+  ProdW (..),
+  SizeW (..),
+  PairSpec (..),
+  ifElse,
+  sizeOf_,
 
-    -- * Useful internal function symbols
-    prodFst_,
-    prodSnd_,
-    prod_,
+  -- * Useful internal function symbols
+  prodFst_,
+  prodSnd_,
+  prod_,
 
-    -- * Misc
-    genFromSizeSpec,
-    maxSpec,
-    rangeSize,
-    hasSize,
-    genInverse,
-    between,
+  -- * Misc
+  genFromSizeSpec,
+  maxSpec,
+  rangeSize,
+  hasSize,
+  genInverse,
+  between,
 
-    -- * Patterns
-    pattern Product,
+  -- * Patterns
+  pattern Product,
 
-    -- * Classes
-    Sized (..),
+  -- * Classes
+  Sized (..),
 ) where
 
 import Constrained.AbstractSyntax
@@ -72,7 +72,6 @@ import Constrained.List
 import Constrained.NumOrd
 import Constrained.PrettyUtils
 import Constrained.SumList
-
 -- TODO: some strange things here, why is SolverStage in here?!
 -- Because it is mutually recursive with something else in here.
 import Constrained.Syntax
@@ -86,9 +85,9 @@ import Data.Typeable
 import Prettyprinter hiding (cat)
 import Prelude hiding (cycle, pred)
 
-instance (Numeric a) => Complete a where
-    simplifyA = simplifySpec
-    genFromSpecA = genFromSpecT
+instance Numeric a => Complete a where
+  simplifyA = simplifySpec
+  genFromSpecA = genFromSpecT
 
 -- | If the `Specification Bool` doesn't constrain the boolean you will get a `TrueSpec` out.
 ifElse :: (IsPred p, IsPred q) => Term Bool -> p -> q -> Pred
@@ -106,12 +105,12 @@ pairView :: Term (Prod a b) -> Maybe (Term a, Term b)
 pairView (App (getWitness -> Just ProdW) (x :> y :> Nil)) = Just (x, y)
 pairView _ = Nothing
 
-cartesian ::
-    forall a b.
-    (HasSpec a, HasSpec b) =>
-    Specification a ->
-    Specification b ->
-    Specification (Prod a b)
+cartesian
+  :: forall a b
+   . (HasSpec a, HasSpec b)
+  => Specification a
+  -> Specification b
+  -> Specification (Prod a b)
 cartesian (ErrorSpec es) (ErrorSpec fs) = ErrorSpec (es <> fs)
 cartesian (ErrorSpec es) _ = ErrorSpec (NE.cons "cartesian left" es)
 cartesian _ (ErrorSpec es) = ErrorSpec (NE.cons "cartesian right" es)
@@ -121,49 +120,49 @@ cartesian s s' = typeSpec $ Cartesian s s'
 data PairSpec a b = Cartesian (Specification a) (Specification b)
 
 instance (HasSpec a, HasSpec b) => HasSpec (Prod a b) where
-    type TypeSpec (Prod a b) = PairSpec a b
+  type TypeSpec (Prod a b) = PairSpec a b
 
-    type Prerequisites (Prod a b) = (HasSpec a, HasSpec b)
+  type Prerequisites (Prod a b) = (HasSpec a, HasSpec b)
 
-    emptySpec = Cartesian mempty mempty
+  emptySpec = Cartesian mempty mempty
 
-    combineSpec (Cartesian a b) (Cartesian a' b') = cartesian (a <> a') (b <> b')
+  combineSpec (Cartesian a b) (Cartesian a' b') = cartesian (a <> a') (b <> b')
 
-    conformsTo (Prod a b) (Cartesian sa sb) = conformsToSpec a sa && conformsToSpec b sb
+  conformsTo (Prod a b) (Cartesian sa sb) = conformsToSpec a sa && conformsToSpec b sb
 
-    genFromTypeSpec (Cartesian sa sb) = Prod <$> genFromSpecT sa <*> genFromSpecT sb
+  genFromTypeSpec (Cartesian sa sb) = Prod <$> genFromSpecT sa <*> genFromSpecT sb
 
-    shrinkWithTypeSpec (Cartesian sa sb) (Prod a b) =
-        [Prod a' b | a' <- shrinkWithSpec sa a]
-            ++ [Prod a b' | b' <- shrinkWithSpec sb b]
+  shrinkWithTypeSpec (Cartesian sa sb) (Prod a b) =
+    [Prod a' b | a' <- shrinkWithSpec sa a]
+      ++ [Prod a b' | b' <- shrinkWithSpec sb b]
 
-    fixupWithTypeSpec (Cartesian sa sb) (Prod a b) =
-        Prod <$> fixupWithSpec sa a <*> fixupWithSpec sb b
+  fixupWithTypeSpec (Cartesian sa sb) (Prod a b) =
+    Prod <$> fixupWithSpec sa a <*> fixupWithSpec sb b
 
-    toPreds x (Cartesian sf ss) =
-        satisfies (prodFst_ x) sf
-            <> satisfies (prodSnd_ x) ss
+  toPreds x (Cartesian sf ss) =
+    satisfies (prodFst_ x) sf
+      <> satisfies (prodSnd_ x) ss
 
-    cardinalTypeSpec (Cartesian x y) = (cardinality x) + (cardinality y)
+  cardinalTypeSpec (Cartesian x y) = (cardinality x) + (cardinality y)
 
-    typeSpecHasError (Cartesian x y) =
-        case (isErrorLike x, isErrorLike y) of
-            (False, False) -> Nothing
-            (True, False) -> Just $ errorLikeMessage x
-            (False, True) -> Just $ errorLikeMessage y
-            (True, True) -> Just $ (errorLikeMessage x <> errorLikeMessage y)
+  typeSpecHasError (Cartesian x y) =
+    case (isErrorLike x, isErrorLike y) of
+      (False, False) -> Nothing
+      (True, False) -> Just $ errorLikeMessage x
+      (False, True) -> Just $ errorLikeMessage y
+      (True, True) -> Just $ (errorLikeMessage x <> errorLikeMessage y)
 
-    alternateShow (Cartesian left right@(TypeSpec r [])) =
-        case alternateShow @b r of
-            (BinaryShow "Cartesian" ps) -> BinaryShow "Cartesian" ("," <+> viaShow left : ps)
-            (BinaryShow "SumSpec" ps) -> BinaryShow "Cartesian" ("," <+> viaShow left : ["SumSpec" /> vsep ps])
-            _ -> BinaryShow "Cartesian" ["," <+> viaShow left, "," <+> viaShow right]
-    alternateShow (Cartesian left right) = BinaryShow "Cartesian" ["," <+> viaShow left, "," <+> viaShow right]
+  alternateShow (Cartesian left right@(TypeSpec r [])) =
+    case alternateShow @b r of
+      (BinaryShow "Cartesian" ps) -> BinaryShow "Cartesian" ("," <+> viaShow left : ps)
+      (BinaryShow "SumSpec" ps) -> BinaryShow "Cartesian" ("," <+> viaShow left : ["SumSpec" /> vsep ps])
+      _ -> BinaryShow "Cartesian" ["," <+> viaShow left, "," <+> viaShow right]
+  alternateShow (Cartesian left right) = BinaryShow "Cartesian" ["," <+> viaShow left, "," <+> viaShow right]
 
 instance (HasSpec a, HasSpec b) => Show (PairSpec a b) where
-    show pair@(Cartesian l r) = case alternateShow @(Prod a b) pair of
-        (BinaryShow "Cartesian" ps) -> show $ parens ("Cartesian" /> vsep ps)
-        _ -> "(Cartesian " ++ "(" ++ show l ++ ") (" ++ show r ++ "))"
+  show pair@(Cartesian l r) = case alternateShow @(Prod a b) pair of
+    (BinaryShow "Cartesian" ps) -> show $ parens ("Cartesian" /> vsep ps)
+    _ -> "(Cartesian " ++ "(" ++ show l ++ ") (" ++ show r ++ "))"
 
 -- ==================================================
 -- Logic instances for Prod
@@ -171,76 +170,76 @@ instance (HasSpec a, HasSpec b) => Show (PairSpec a b) where
 
 -- | Function symbols for talking about `Prod`
 data ProdW :: [Type] -> Type -> Type where
-    ProdW :: (HasSpec a, HasSpec b) => ProdW '[a, b] (Prod a b)
-    ProdFstW :: (HasSpec a, HasSpec b) => ProdW '[Prod a b] a
-    ProdSndW :: (HasSpec a, HasSpec b) => ProdW '[Prod a b] b
+  ProdW :: (HasSpec a, HasSpec b) => ProdW '[a, b] (Prod a b)
+  ProdFstW :: (HasSpec a, HasSpec b) => ProdW '[Prod a b] a
+  ProdSndW :: (HasSpec a, HasSpec b) => ProdW '[Prod a b] b
 
 deriving instance Eq (ProdW as b)
 
 deriving instance Show (ProdW as b)
 
 instance Syntax ProdW where
-    prettySymbol ProdW _ _ = Nothing
-    prettySymbol ProdFstW (t :> Nil) p = parensIf (p > 10) <$> prettySelect 0 t
-    prettySymbol ProdSndW (t :> Nil) p = parensIf (p > 10) <$> prettySelect 1 t
+  prettySymbol ProdW _ _ = Nothing
+  prettySymbol ProdFstW (t :> Nil) p = parensIf (p > 10) <$> prettySelect 0 t
+  prettySymbol ProdSndW (t :> Nil) p = parensIf (p > 10) <$> prettySelect 1 t
 
 prettySelect :: Int -> TermD deps t -> Maybe (Doc ann)
 prettySelect i (App f (t :> Nil))
-    | Just ProdSndW <- getWitness f = prettySelect (i + 1) t
-    | Just ToGenericW <- getWitness f = Just $ "sel @" <> pretty i <+> prettyPrec 11 t
+  | Just ProdSndW <- getWitness f = prettySelect (i + 1) t
+  | Just ToGenericW <- getWitness f = Just $ "sel @" <> pretty i <+> prettyPrec 11 t
 prettySelect _ _ = Nothing
 
 instance Semantics ProdW where
-    semantics ProdW = Prod
-    semantics ProdFstW = prodFst
-    semantics ProdSndW = prodSnd
+  semantics ProdW = Prod
+  semantics ProdFstW = prodFst
+  semantics ProdSndW = prodSnd
 
 instance Logic ProdW where
-    propagateTypeSpec ProdFstW (Unary HOLE) ts cant = cartesian (TypeSpec ts cant) TrueSpec
-    propagateTypeSpec ProdSndW (Unary HOLE) ts cant =
-        cartesian TrueSpec (TypeSpec ts cant)
-    propagateTypeSpec ProdW (a :>: HOLE) sc@(Cartesian sa sb) cant
-        | a `conformsToSpec` sa = sb <> foldMap notEqualSpec (sameFst a cant)
-        | otherwise =
-            ErrorSpec
-                ( NE.fromList
-                    ["propagate (pair_ " ++ show a ++ " HOLE) has conformance failure on a", show (TypeSpec sc cant)]
-                )
-    propagateTypeSpec ProdW (HOLE :<: b) sc@(Cartesian sa sb) cant
-        | b `conformsToSpec` sb = sa <> foldMap notEqualSpec (sameSnd b cant)
-        | otherwise =
-            ErrorSpec
-                ( NE.fromList
-                    ["propagate (pair_ HOLE " ++ show b ++ ") has conformance failure on b", show (TypeSpec sc cant)]
-                )
+  propagateTypeSpec ProdFstW (Unary HOLE) ts cant = cartesian (TypeSpec ts cant) TrueSpec
+  propagateTypeSpec ProdSndW (Unary HOLE) ts cant =
+    cartesian TrueSpec (TypeSpec ts cant)
+  propagateTypeSpec ProdW (a :>: HOLE) sc@(Cartesian sa sb) cant
+    | a `conformsToSpec` sa = sb <> foldMap notEqualSpec (sameFst a cant)
+    | otherwise =
+        ErrorSpec
+          ( NE.fromList
+              ["propagate (pair_ " ++ show a ++ " HOLE) has conformance failure on a", show (TypeSpec sc cant)]
+          )
+  propagateTypeSpec ProdW (HOLE :<: b) sc@(Cartesian sa sb) cant
+    | b `conformsToSpec` sb = sa <> foldMap notEqualSpec (sameSnd b cant)
+    | otherwise =
+        ErrorSpec
+          ( NE.fromList
+              ["propagate (pair_ HOLE " ++ show b ++ ") has conformance failure on b", show (TypeSpec sc cant)]
+          )
 
-    propagateMemberSpec ProdFstW (Unary HOLE) es = cartesian (MemberSpec es) TrueSpec
-    propagateMemberSpec ProdSndW (Unary HOLE) es = cartesian TrueSpec (MemberSpec es)
-    propagateMemberSpec ProdW (a :>: HOLE) es =
-        case (nub (sameFst a (NE.toList es))) of
-            (w : ws) -> MemberSpec (w :| ws)
-            [] ->
-                ErrorSpec $
-                    NE.fromList
-                        [ "propagate (pair_ HOLE " ++ show a ++ ") on (MemberSpec " ++ show (NE.toList es)
-                        , "Where " ++ show a ++ " does not appear as the fst component of anything in the MemberSpec."
-                        ]
-    propagateMemberSpec ProdW (HOLE :<: b) es =
-        case (nub (sameSnd b (NE.toList es))) of
-            (w : ws) -> MemberSpec (w :| ws)
-            [] ->
-                ErrorSpec $
-                    NE.fromList
-                        [ "propagate (pair_ HOLE " ++ show b ++ ") on (MemberSpec " ++ show (NE.toList es)
-                        , "Where " ++ show b ++ " does not appear as the snd component of anything in the MemberSpec."
-                        ]
+  propagateMemberSpec ProdFstW (Unary HOLE) es = cartesian (MemberSpec es) TrueSpec
+  propagateMemberSpec ProdSndW (Unary HOLE) es = cartesian TrueSpec (MemberSpec es)
+  propagateMemberSpec ProdW (a :>: HOLE) es =
+    case (nub (sameFst a (NE.toList es))) of
+      (w : ws) -> MemberSpec (w :| ws)
+      [] ->
+        ErrorSpec $
+          NE.fromList
+            [ "propagate (pair_ HOLE " ++ show a ++ ") on (MemberSpec " ++ show (NE.toList es)
+            , "Where " ++ show a ++ " does not appear as the fst component of anything in the MemberSpec."
+            ]
+  propagateMemberSpec ProdW (HOLE :<: b) es =
+    case (nub (sameSnd b (NE.toList es))) of
+      (w : ws) -> MemberSpec (w :| ws)
+      [] ->
+        ErrorSpec $
+          NE.fromList
+            [ "propagate (pair_ HOLE " ++ show b ++ ") on (MemberSpec " ++ show (NE.toList es)
+            , "Where " ++ show b ++ " does not appear as the snd component of anything in the MemberSpec."
+            ]
 
-    rewriteRules ProdFstW ((pairView -> Just (x, _)) :> Nil) Evidence = Just x
-    rewriteRules ProdSndW ((pairView -> Just (_, y)) :> Nil) Evidence = Just y
-    rewriteRules _ _ _ = Nothing
+  rewriteRules ProdFstW ((pairView -> Just (x, _)) :> Nil) Evidence = Just x
+  rewriteRules ProdSndW ((pairView -> Just (_, y)) :> Nil) Evidence = Just y
+  rewriteRules _ _ _ = Nothing
 
-    mapTypeSpec ProdFstW (Cartesian s _) = s
-    mapTypeSpec ProdSndW (Cartesian _ s) = s
+  mapTypeSpec ProdFstW (Cartesian s _) = s
+  mapTypeSpec ProdSndW (Cartesian _ s) = s
 
 -- | `fst` on `Prod`
 prodFst_ :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term a
@@ -254,23 +253,23 @@ prodSnd_ = appTerm ProdSndW
 prod_ :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (Prod a b)
 prod_ = appTerm ProdW
 
-sameFst :: (Eq a1) => a1 -> [Prod a1 a2] -> [a2]
+sameFst :: Eq a1 => a1 -> [Prod a1 a2] -> [a2]
 sameFst a ps = [b | Prod a' b <- ps, a == a']
 
-sameSnd :: (Eq a1) => a1 -> [Prod a2 a1] -> [a2]
+sameSnd :: Eq a1 => a1 -> [Prod a2 a1] -> [a2]
 sameSnd b ps = [a | Prod a b' <- ps, b == b']
 
 -- | Pattern for `prod_`
-pattern Product ::
-    forall c.
-    () =>
-    forall a b.
-    ( c ~ Prod a b
-    , AppRequires ProdW '[a, b] (Prod a b)
-    ) =>
-    Term a ->
-    Term b ->
-    Term c
+pattern Product
+  :: forall c
+   . ()
+  => forall a b
+   . ( c ~ Prod a b
+     , AppRequires ProdW '[a, b] (Prod a b)
+     )
+  => Term a
+  -> Term b
+  -> Term c
 pattern Product x y <- (App (getWitness -> Just ProdW) (x :> y :> Nil))
 
 -- ================================================================
@@ -281,10 +280,9 @@ pattern Product x y <- (App (getWitness -> Just ProdW) (x :> y :> Nil))
 sizeOf_ :: (HasSpec a, Sized a) => Term a -> Term Integer
 sizeOf_ = curryList (App SizeOfW)
 
-{- | Because Sizes should always be >= 0, We provide this alternate generator
-  that can be used to replace (genFromSpecT @Integer), to ensure this important property
--}
-genFromSizeSpec :: (MonadGenError m) => Specification Integer -> GenT m Integer
+-- | Because Sizes should always be >= 0, We provide this alternate generator
+--   that can be used to replace (genFromSpecT @Integer), to ensure this important property
+genFromSizeSpec :: MonadGenError m => Specification Integer -> GenT m Integer
 genFromSizeSpec integerSpec = genFromSpecT (integerSpec <> geqSpec 0)
 
 -- =====================================================================
@@ -300,38 +298,38 @@ type SizeSpec = NumSpec Integer
 
 -- | The things we need to talk about the `sizeOf_` a thing
 class Sized t where
-    sizeOf :: t -> Integer
-    default sizeOf :: (HasSimpleRep t, Sized (SimpleRep t)) => t -> Integer
-    sizeOf = sizeOf . toSimpleRep
+  sizeOf :: t -> Integer
+  default sizeOf :: (HasSimpleRep t, Sized (SimpleRep t)) => t -> Integer
+  sizeOf = sizeOf . toSimpleRep
 
-    liftSizeSpec :: (HasSpec t) => SizeSpec -> [Integer] -> Specification t
-    default liftSizeSpec ::
-        ( Sized (SimpleRep t)
-        , GenericRequires t
-        ) =>
-        SizeSpec ->
-        [Integer] ->
-        Specification t
-    liftSizeSpec sz cant = fromSimpleRepSpec $ liftSizeSpec sz cant
+  liftSizeSpec :: HasSpec t => SizeSpec -> [Integer] -> Specification t
+  default liftSizeSpec
+    :: ( Sized (SimpleRep t)
+       , GenericRequires t
+       )
+    => SizeSpec
+    -> [Integer]
+    -> Specification t
+  liftSizeSpec sz cant = fromSimpleRepSpec $ liftSizeSpec sz cant
 
-    liftMemberSpec :: (HasSpec t) => [Integer] -> Specification t
-    default liftMemberSpec ::
-        ( Sized (SimpleRep t)
-        , GenericRequires t
-        ) =>
-        [Integer] ->
-        Specification t
-    liftMemberSpec = fromSimpleRepSpec . liftMemberSpec
+  liftMemberSpec :: HasSpec t => [Integer] -> Specification t
+  default liftMemberSpec
+    :: ( Sized (SimpleRep t)
+       , GenericRequires t
+       )
+    => [Integer]
+    -> Specification t
+  liftMemberSpec = fromSimpleRepSpec . liftMemberSpec
 
-    sizeOfTypeSpec :: (HasSpec t) => TypeSpec t -> Specification Integer
-    default sizeOfTypeSpec ::
-        ( HasSpec (SimpleRep t)
-        , Sized (SimpleRep t)
-        , TypeSpec t ~ TypeSpec (SimpleRep t)
-        ) =>
-        TypeSpec t ->
-        Specification Integer
-    sizeOfTypeSpec = sizeOfTypeSpec @(SimpleRep t)
+  sizeOfTypeSpec :: HasSpec t => TypeSpec t -> Specification Integer
+  default sizeOfTypeSpec
+    :: ( HasSpec (SimpleRep t)
+       , Sized (SimpleRep t)
+       , TypeSpec t ~ TypeSpec (SimpleRep t)
+       )
+    => TypeSpec t
+    -> Specification Integer
+  sizeOfTypeSpec = sizeOfTypeSpec @(SimpleRep t)
 
 -- =============================================================
 -- All Foldy class instances are over Numbers (so far).
@@ -343,109 +341,107 @@ class Sized t where
 
 -- | Function symbols for basic higher-order functions
 data FunW (dom :: [Type]) (rng :: Type) where
-    IdW :: forall a. FunW '[a] a
-    ComposeW ::
-        forall b t1 t2 a r.
-        ( AppRequires t1 '[b] r
-        , AppRequires t2 '[a] b
-        , HasSpec b
-        ) =>
-        t1 '[b] r ->
-        t2 '[a] b ->
-        FunW '[a] r
+  IdW :: forall a. FunW '[a] a
+  ComposeW
+    :: forall b t1 t2 a r
+     . ( AppRequires t1 '[b] r
+       , AppRequires t2 '[a] b
+       , HasSpec b
+       )
+    => t1 '[b] r
+    -> t2 '[a] b
+    -> FunW '[a] r
 
 instance Semantics FunW where
-    semantics IdW = id
-    semantics (ComposeW f g) = semantics f . semantics g
+  semantics IdW = id
+  semantics (ComposeW f g) = semantics f . semantics g
 
 instance Syntax FunW
 
 instance Show (FunW dom rng) where
-    show IdW = "id_"
-    show (ComposeW x y) = "(compose_ " ++ show x ++ " " ++ show y ++ ")"
+  show IdW = "id_"
+  show (ComposeW x y) = "(compose_ " ++ show x ++ " " ++ show y ++ ")"
 
 instance Eq (FunW dom rng) where
-    IdW == IdW = True
-    ComposeW f f' == ComposeW g g' = compareWit f g && compareWit f' g'
-    _ == _ = False
+  IdW == IdW = True
+  ComposeW f f' == ComposeW g g' = compareWit f g && compareWit f' g'
+  _ == _ = False
 
-compareWit ::
-    forall t1 bs1 r1 t2 bs2 r2.
-    (AppRequires t1 bs1 r1, AppRequires t2 bs2 r2) =>
-    t1 bs1 r1 ->
-    t2 bs2 r2 ->
-    Bool
+compareWit
+  :: forall t1 bs1 r1 t2 bs2 r2
+   . (AppRequires t1 bs1 r1, AppRequires t2 bs2 r2)
+  => t1 bs1 r1
+  -> t2 bs2 r2
+  -> Bool
 compareWit x y = case (eqT @t1 @t2, eqT @bs1 @bs2, eqT @r1 @r2) of
-    (Just Refl, Just Refl, Just Refl) -> x == y
-    _ -> False
+  (Just Refl, Just Refl, Just Refl) -> x == y
+  _ -> False
 
 -- ===================================
 -- Logic instances for IdW and ComposeW
 
 instance Logic FunW where
-    propagate IdW (Unary HOLE) = id
-    propagate (ComposeW f g) (Unary HOLE) = propagate g (Unary HOLE) . propagate f (Unary HOLE)
+  propagate IdW (Unary HOLE) = id
+  propagate (ComposeW f g) (Unary HOLE) = propagate g (Unary HOLE) . propagate f (Unary HOLE)
 
-    mapTypeSpec IdW ts = typeSpec ts
-    mapTypeSpec (ComposeW g h) ts = mapSpec g . mapSpec h $ typeSpec ts
+  mapTypeSpec IdW ts = typeSpec ts
+  mapTypeSpec (ComposeW g h) ts = mapSpec g . mapSpec h $ typeSpec ts
 
-    -- Note we need the Evidence to apply App to f, and to apply App to g
-    rewriteRules (ComposeW f g) (x :> Nil) Evidence = Just $ App f (App g (x :> Nil) :> Nil)
-    rewriteRules IdW (x :> Nil) Evidence = Just x
+  -- Note we need the Evidence to apply App to f, and to apply App to g
+  rewriteRules (ComposeW f g) (x :> Nil) Evidence = Just $ App f (App g (x :> Nil) :> Nil)
+  rewriteRules IdW (x :> Nil) Evidence = Just x
 
 -- =======================================================
 -- The Foldy class instances for Numbers
 -- =======================================================
 
-{- | Invert a `Fun` and combine it with a `Specification` for the input to
-generate a value
--}
-genInverse ::
-    ( MonadGenError m
-    , HasSpec a
-    , HasSpec b
-    ) =>
-    Fun '[a] b ->
-    Specification a ->
-    b ->
-    GenT m a
+-- | Invert a `Fun` and combine it with a `Specification` for the input to
+-- generate a value
+genInverse
+  :: ( MonadGenError m
+     , HasSpec a
+     , HasSpec b
+     )
+  => Fun '[a] b
+  -> Specification a
+  -> b
+  -> GenT m a
 genInverse (Fun f) argS x =
-    let argSpec' = argS <> propagate f (HOLE :? Nil) (equalSpec x)
-     in explainNE
-            ( NE.fromList
-                [ "genInverse"
-                , "  f = " ++ show f
-                , show $ "  argS =" <+> pretty argS
-                , "  x = " ++ show x
-                , show $ "  argSpec' =" <+> pretty argSpec'
-                ]
-            )
-            $ genFromSpecT argSpec'
+  let argSpec' = argS <> propagate f (HOLE :? Nil) (equalSpec x)
+   in explainNE
+        ( NE.fromList
+            [ "genInverse"
+            , "  f = " ++ show f
+            , show $ "  argS =" <+> pretty argS
+            , "  x = " ++ show x
+            , show $ "  argSpec' =" <+> pretty argSpec'
+            ]
+        )
+        $ genFromSpecT argSpec'
 
-{- | Function symbols for generalized `length` and `Data.Set.size` functions.
-Used to implement `sizeOf_`.
--}
+-- | Function symbols for generalized `length` and `Data.Set.size` functions.
+-- Used to implement `sizeOf_`.
 data SizeW (dom :: [Type]) rng :: Type where
-    SizeOfW :: (Sized n, HasSpec n) => SizeW '[n] Integer
+  SizeOfW :: (Sized n, HasSpec n) => SizeW '[n] Integer
 
 deriving instance Eq (SizeW ds r)
 
 instance Show (SizeW d r) where
-    show SizeOfW = "sizeOf_"
+  show SizeOfW = "sizeOf_"
 
 instance Semantics SizeW where
-    semantics SizeOfW = sizeOf -- From the Sized class.
+  semantics SizeOfW = sizeOf -- From the Sized class.
 
 instance Syntax SizeW
 
 instance Logic SizeW where
-    propagateTypeSpec SizeOfW (Unary HOLE) ts cant = liftSizeSpec ts cant
+  propagateTypeSpec SizeOfW (Unary HOLE) ts cant = liftSizeSpec ts cant
 
-    propagateMemberSpec SizeOfW (Unary HOLE) es = liftMemberSpec (NE.toList es)
+  propagateMemberSpec SizeOfW (Unary HOLE) es = liftMemberSpec (NE.toList es)
 
-    mapTypeSpec (SizeOfW :: SizeW '[a] b) ts =
-        constrained $ \x ->
-            unsafeExists $ \x' -> Assert (x ==. sizeOf_ x') <> toPreds @a x' ts
+  mapTypeSpec (SizeOfW :: SizeW '[a] b) ts =
+    constrained $ \x ->
+      unsafeExists $ \x' -> Assert (x ==. sizeOf_ x') <> toPreds @a x' ts
 
 -- ======================================
 
@@ -463,7 +459,7 @@ maxSpec :: Specification Integer -> Specification Integer
 maxSpec (ExplainSpec es s) = explainSpec es (maxSpec s)
 maxSpec TrueSpec = TrueSpec
 maxSpec s@(SuspendedSpec _ _) =
-    constrained $ \x -> unsafeExists $ \y -> [y `satisfies` s, Explain (pure "maxSpec on SuspendedSpec") $ Assert (x <=. y)]
+  constrained $ \x -> unsafeExists $ \y -> [y `satisfies` s, Explain (pure "maxSpec on SuspendedSpec") $ Assert (x <=. y)]
 maxSpec (ErrorSpec xs) = ErrorSpec xs
 maxSpec (MemberSpec xs) = leqSpec (maximum xs)
 maxSpec (TypeSpec (NumSpecInterval _ hi) bad) = TypeSpec (NumSpecInterval Nothing hi) bad

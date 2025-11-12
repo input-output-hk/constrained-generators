@@ -18,38 +18,38 @@ import Data.Tree
 
 benchmarks :: Benchmark
 benchmarks =
-    bgroup
-        "constrained"
-        [ benchSpec 10 30 "TrueSpec@Map" (trueSpec :: Specification (Map Int Int))
-        , benchSpec 10 30 "TrueSpec@[]" (trueSpec :: Specification [Int])
-        , benchSpec 10 30 "TrueSpec@Set" (trueSpec :: Specification (Set Int))
-        , benchSpec
-            10
-            30
-            "TrueSpec@Tree"
-            (giveHint (Nothing, 30) <> trueSpec :: Specification (Tree Int))
-        , benchSpec 10 30 "roseTreeMaybe" roseTreeMaybe
-        , benchSpec 10 30 "listSumPair" listSumPair
-        ]
+  bgroup
+    "constrained"
+    [ benchSpec 10 30 "TrueSpec@Map" (trueSpec :: Specification (Map Int Int))
+    , benchSpec 10 30 "TrueSpec@[]" (trueSpec :: Specification [Int])
+    , benchSpec 10 30 "TrueSpec@Set" (trueSpec :: Specification (Set Int))
+    , benchSpec
+        10
+        30
+        "TrueSpec@Tree"
+        (giveHint (Nothing, 30) <> trueSpec :: Specification (Tree Int))
+    , benchSpec 10 30 "roseTreeMaybe" roseTreeMaybe
+    , benchSpec 10 30 "listSumPair" listSumPair
+    ]
 
 roseTreeMaybe :: Specification (Tree (Maybe (Int, Int)))
 roseTreeMaybe = constrained $ \t ->
-    [ forAll' t $ \mp ts ->
-        forAll ts $ \t' ->
-            onJust mp $ \p ->
-                onJust (rootLabel_ t') $ \p' ->
-                    fst_ p' ==. snd_ p
-    , forAll' t $ \mp _ -> isJust mp
-    , genHint (Nothing, 10) t
-    ]
+  [ forAll' t $ \mp ts ->
+      forAll ts $ \t' ->
+        onJust mp $ \p ->
+          onJust (rootLabel_ t') $ \p' ->
+            fst_ p' ==. snd_ p
+  , forAll' t $ \mp _ -> isJust mp
+  , genHint (Nothing, 10) t
+  ]
 
 listSumPair :: Specification [(Int, Int)]
 listSumPair = constrained $ \xs ->
-    [ assert $ foldMap_ fst_ xs ==. 100
-    , forAll' xs $ \x y -> [20 <. x, x <. 30, y <. 100]
-    ]
+  [ assert $ foldMap_ fst_ xs ==. 100
+  , forAll' xs $ \x y -> [20 <. x, x <. 30, y <. 100]
+  ]
 
 benchSpec :: (HasSpec a, NFData a) => Int -> Int -> String -> Specification a -> Benchmark
 benchSpec seed size nm spec =
-    bench (unlines [nm, show (genFromSpecWithSeed seed size spec)]) $
-        nf (genFromSpecWithSeed seed size) spec
+  bench (unlines [nm, show (genFromSpecWithSeed seed size spec)]) $
+    nf (genFromSpecWithSeed seed size) spec

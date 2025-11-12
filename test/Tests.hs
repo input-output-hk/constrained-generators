@@ -8,7 +8,7 @@ import Test.Hspec
 
 main :: IO ()
 main = do
-    nightly <- isJust <$> lookupEnv "NIGHTLY"
-    hspec $ do
-        Tests.tests nightly
-        Graph.tests nightly
+  nightly <- isJust <$> lookupEnv "NIGHTLY"
+  hspec $ do
+    Tests.tests nightly
+    Graph.tests nightly

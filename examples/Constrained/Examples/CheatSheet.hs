@@ -54,9 +54,9 @@ import Test.QuickCheck (Property, label)
 
 specInt :: Specification Int
 specInt = constrained $ \i ->
-    [ assert $ i <. 10
-    , assert $ 0 <. i
-    ]
+  [ assert $ i <. 10
+  , assert $ 0 <. i
+  ]
 
 -- What's going on here? In short:
 --    `constrained :: (HasSpec a, IsPred p fn) => (Term a -> p) -> Specification a`
@@ -104,9 +104,9 @@ specInt = constrained $ \i ->
 
 specInt' :: Specification Int
 specInt' = constrained $ \i ->
-    [ i <. 10
-    , 0 <. i
-    ]
+  [ i <. 10
+  , 0 <. i
+  ]
 
 -- However, beware that when we start mixing `Term Bool` and `Pred` in these lists we can end
 -- up getting some inscrutable error messages. So, if a call to `constrained` or another function that
@@ -117,9 +117,9 @@ specInt' = constrained $ \i ->
 
 specProd :: Specification (Int, Int)
 specProd = constrained $ \p ->
-    [ fst_ p <. 10
-    , snd_ p <. 100
-    ]
+  [ fst_ p <. 10
+  , snd_ p <. 100
+  ]
 
 -- However, product types can also be a bit finicky:
 
@@ -157,8 +157,8 @@ specProd0 = constrained $ \p -> assert $ fst_ p <. snd_ p
 
 specProd1 :: Specification (Int, Int)
 specProd1 = constrained $ \p ->
-    match p $ \x y ->
-        x <. y
+  match p $ \x y ->
+    x <. y
 
 -- λ> sample $ genFromSpec specProd1
 -- (-1,0)
@@ -180,11 +180,11 @@ specProd1 = constrained $ \p ->
 
 nested :: Specification ((Int, Int), (Int, Int))
 nested =
-    constrained $ \pp ->
-        match pp $ \p1 p2 ->
-            match p1 $ \x1 y1 ->
-                match p2 $ \x2 y2 ->
-                    [x1 <=. y1, y1 <=. x2, x2 <=. y2]
+  constrained $ \pp ->
+    match pp $ \p1 p2 ->
+      match p1 $ \x1 y1 ->
+        match p2 $ \x2 y2 ->
+          [x1 <=. y1, y1 <=. x2, x2 <=. y2]
 
 -- ghci> sample $ genFromSpec nested
 -- ((0,0),(0,0))
@@ -225,9 +225,9 @@ specProd2 = constrained' $ \x y -> x <. y
 
 solverOrder :: Specification (Int, Int)
 solverOrder = constrained' $ \x y ->
-    [ x <. y
-    , y <. 10
-    ]
+  [ x <. y
+  , y <. 10
+  ]
 
 -- For example, if you tried generating a value for `x` first chances are you'd generate
 -- something larger than 10, which would make it impossible to generate a valid `y`. However,
@@ -298,9 +298,9 @@ solverOrder = constrained' $ \x y ->
 
 solverOrder' :: Specification (Int, Int)
 solverOrder' = constrained' $ \ [var|x|] [var|y|] ->
-    [ x <. y
-    , y <. 10
-    ]
+  [ x <. y
+  , y <. 10
+  ]
 
 -- Now we get more reasonable looking oputput from `printPlan`:
 -- λ> printPlan solverOrder'
@@ -327,9 +327,9 @@ solverOrder' = constrained' $ \ [var|x|] [var|y|] ->
 
 tightFit0 :: Specification (Int, Int)
 tightFit0 = constrained' $ \x y ->
-    [ 0 <. x
-    , x <. y
-    ]
+  [ 0 <. x
+  , x <. y
+  ]
 
 -- λ> sample $ genFromSpec tightFit0
 
@@ -378,10 +378,10 @@ tightFit0 = constrained' $ \x y ->
 
 tightFit1 :: Specification (Int, Int)
 tightFit1 = constrained' $ \x y ->
-    [ assert $ 0 <. x
-    , assert $ x <. y
-    , y `dependsOn` x
-    ]
+  [ assert $ 0 <. x
+  , assert $ x <. y
+  , y `dependsOn` x
+  ]
 
 -- λ> printPlan tightFit1
 -- Simplified spec:
@@ -424,10 +424,10 @@ tightFit1 = constrained' $ \x y ->
 
 booleanExample :: Specification (Int, Int)
 booleanExample = constrained' $ \x y ->
-    ifElse
-        (0 <. x)
-        (y ==. 10)
-        (y ==. 20)
+  ifElse
+    (0 <. x)
+    (y ==. 10)
+    (y ==. 20)
 
 -- sample $ genFromSpec booleanExample
 -- (0,20)
@@ -456,25 +456,25 @@ validPVPVersion = constrained' $ \ma mi -> [0 <=. ma, 0 <=. mi]
 
 canFollowExample :: Specification ((Int, Int), (Int, Int))
 canFollowExample = constrained' $ \p q ->
-    [ match p $ \ma mi ->
-        match q $ \ma' mi' ->
-            [ ifElse
-                (ma' ==. ma)
-                (mi' ==. mi + 1)
-                (mi' ==. 0)
-            , -- Note how these two constraints imply a cycle:
-              --  ma' <- ma <- ma'
-              assert $ ma' <=. ma + 1
-            , assert $ ma <=. ma'
-            , -- We break that cycle by specifying a concrete order
-              -- Another option would be to define `>=.` but that doesn't
-              -- exist right now and we will get to extending the language
-              -- later on!
-              ma' `dependsOn` ma
-            ]
-    , p `satisfies` validPVPVersion
-    , q `satisfies` validPVPVersion
-    ]
+  [ match p $ \ma mi ->
+      match q $ \ma' mi' ->
+        [ ifElse
+            (ma' ==. ma)
+            (mi' ==. mi + 1)
+            (mi' ==. 0)
+        , -- Note how these two constraints imply a cycle:
+          --  ma' <- ma <- ma'
+          assert $ ma' <=. ma + 1
+        , assert $ ma <=. ma'
+        , -- We break that cycle by specifying a concrete order
+          -- Another option would be to define `>=.` but that doesn't
+          -- exist right now and we will get to extending the language
+          -- later on!
+          ma' `dependsOn` ma
+        ]
+  , p `satisfies` validPVPVersion
+  , q `satisfies` validPVPVersion
+  ]
 
 -- λ> sample $ genFromSpec canFollowExample
 -- ((0,0),(0,1))
@@ -493,35 +493,35 @@ canFollowExample = constrained' $ \p q ->
 
 sumExample :: Specification (Either Int Bool)
 sumExample = constrained $ \e ->
-    (caseOn e)
-        (branch $ \i -> i <. 0)
-        (branch $ \b -> not_ b)
+  (caseOn e)
+    (branch $ \i -> i <. 0)
+    (branch $ \b -> not_ b)
 
 -- Furthermore, cases are solved _inside-out_ by default:
 
 sumExampleTwo :: Specification (Int, Either Int Bool)
 sumExampleTwo = constrained' $ \i e ->
-    [ caseOn
-        e
-        (branch $ \j -> i <. j)
-        (branch $ \b -> not_ b)
-    , assert $ 20 <. i
-    ]
+  [ caseOn
+      e
+      (branch $ \j -> i <. j)
+      (branch $ \b -> not_ b)
+  , assert $ 20 <. i
+  ]
 
 -- We can work with sets with operations like `subset_`, `union_` (or `<>`), `disjoint_`, and `singleton_`:
 
 setExample :: Specification (Set Int, Set Int, Set Int)
 setExample = constrained' $ \xs ys zs ->
-    [ xs `subset_` (ys <> zs)
-    , sizeOf_ ys <=. 10
-    ]
+  [ xs `subset_` (ys <> zs)
+  , sizeOf_ ys <=. 10
+  ]
 
 -- We can also quantify over things like sets with `forAll`:
 
 forAllFollow0 :: Specification ((Int, Int), Set (Int, Int))
 forAllFollow0 = constrained' $ \p qs ->
-    [ forAll qs $ \q -> pair_ p q `satisfies` canFollowExample
-    ]
+  [ forAll qs $ \q -> pair_ p q `satisfies` canFollowExample
+  ]
 
 -- λ> sample $ genFromSpec forAllFollow0
 -- ((0,0),fromList [])
@@ -544,9 +544,9 @@ forAllFollow0 = constrained' $ \p qs ->
 
 forAllFollow :: Specification ((Int, Int), Set (Int, Int))
 forAllFollow = constrained' $ \p qs ->
-    [ forAll qs $ \q -> pair_ p q `satisfies` canFollowExample
-    , p `satisfies` validPVPVersion
-    ]
+  [ forAll qs $ \q -> pair_ p q `satisfies` canFollowExample
+  , p `satisfies` validPVPVersion
+  ]
 
 -- λ> sample $ genFromSpec forAllFollow
 -- ((0,0),fromList [])
@@ -566,13 +566,13 @@ forAllFollow = constrained' $ \p qs ->
 
 existentials :: Specification (Set Int, Set Int)
 existentials = constrained' $ \xs ys ->
-    exists (\eval -> pure $ Set.intersection (eval xs) (eval ys)) $ \zs ->
-        [ assert $ not_ $ null_ zs
-        , assert $ zs `subset_` xs
-        , assert $ zs `subset_` ys
-        , xs `dependsOn` zs
-        , ys `dependsOn` zs
-        ]
+  exists (\eval -> pure $ Set.intersection (eval xs) (eval ys)) $ \zs ->
+    [ assert $ not_ $ null_ zs
+    , assert $ zs `subset_` xs
+    , assert $ zs `subset_` ys
+    , xs `dependsOn` zs
+    , ys `dependsOn` zs
+    ]
 
 -- You can work with your own types relatively easily. If they are `Generic`
 -- you even get all the machinery of sum and product types for free!
@@ -587,11 +587,11 @@ instance HasSpec FooBarBaz
 
 fooBarBaz :: Specification FooBarBaz
 fooBarBaz = constrained $ \fbb ->
-    caseOn
-        fbb
-        (branch $ \i j -> i <. j)
-        (branch $ \b -> not_ b)
-        (branch $ \_ -> False)
+  caseOn
+    fbb
+    (branch $ \i j -> i <. j)
+    (branch $ \b -> not_ b)
+    (branch $ \_ -> False)
 
 -- λ> sample $ genFromSpec fooBarBaz
 -- Foo (-1) 0
@@ -612,7 +612,7 @@ fooBarBaz = constrained $ \fbb ->
 
 reifyExample :: Specification (Int, Int)
 reifyExample = constrained' $ \ [var|a|] [var|b|] ->
-    reifies b a $ \x -> mod x 10
+  reifies b a $ \x -> mod x 10
 
 -- Here we introduce two variables `a` and `b` without any immediate dependency and we say that
 -- `b` reifies `a` via the haskell function `\x -> mod x 10`. The best way to understand what this
@@ -621,9 +621,9 @@ reifyExample = constrained' $ \ [var|a|] [var|b|] ->
 
 reifyExample' :: Specification (Int, Int)
 reifyExample' = constrained' $ \a b ->
-    [ assert $ b ==. mod_ a 10
-    , b `dependsOn` a
-    ]
+  [ assert $ b ==. mod_ a 10
+  , b `dependsOn` a
+  ]
   where
     mod_ :: Term Int -> Term Int -> Term Int
     mod_ = error "This doesn't exist"
@@ -656,10 +656,10 @@ reifyExample' = constrained' $ \a b ->
 
 monitorExample :: Specification (Either Int Int)
 monitorExample = constrained $ \e ->
-    caseOn
-        e
-        (branchW 1 $ \_ -> monitor $ \_ -> label "Left")
-        (branchW 2 $ \_ -> monitor $ \_ -> label "Right")
+  caseOn
+    e
+    (branchW 1 $ \_ -> monitor $ \_ -> label "Left")
+    (branchW 2 $ \_ -> monitor $ \_ -> label "Right")
 
 -- The `forAllSpec :: (Testable p, HasSpec a) => Specification a -> (a -> p) -> Property` we
 -- automatically get the monitoring from the spec in our property:
@@ -679,13 +679,13 @@ prop_monitoring = forAllSpec monitorExample $ \_ -> True
 
 chooseSpecExample :: Specification Int
 chooseSpecExample =
-    chooseSpec
-        (1, constrained $ \i -> i <. 0)
-        (2, constrained $ \i -> 0 <. i)
+  chooseSpec
+    (1, constrained $ \i -> i <. 0)
+    (2, constrained $ \i -> 0 <. i)
 
 prop_chooseSpec :: Property
 prop_chooseSpec = forAllSpec chooseSpecExample $ \i ->
-    label (show $ signum i) True
+  label (show $ signum i) True
 
 -- λ> quickCheck prop_chooseSpec
 -- +++ OK, passed 100 tests:
