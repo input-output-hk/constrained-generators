@@ -163,6 +163,7 @@ benchmark bench
   build-depends:
     base,
     constrained-generators,
+    constrained-generators:examples,
     containers,
     criterion,
     deepseq,

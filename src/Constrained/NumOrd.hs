@@ -1063,7 +1063,6 @@ caseBoolSpec spec cont = case possibleValues spec of
   [b] -> cont b
   _ -> mempty
   where
-    -- where possibleValues s = filter (flip conformsToSpec (simplifySpec s)) [True, False]
     -- This will always get the same result, and probably faster since running 2
     -- conformsToSpec on True and False takes less time than simplifying the spec.
     -- Since we are in TheKnot, we could keep the simplifySpec. Is there a good reason to?

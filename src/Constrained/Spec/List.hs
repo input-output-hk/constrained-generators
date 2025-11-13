@@ -17,7 +17,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans -Wno-name-shadowing #-}
 
 -- | `TypeSpec` definition for `[]` and functions for writing constraints over
 -- lists
@@ -227,7 +227,8 @@ instance HasSpec a => HasSpec [a] where
       Just szHint -> do
         sz <- genFromSizeSpec (leqSpec szHint)
         listOfUntilLenT (genFromSpecT elemS) (fromIntegral sz) (const True)
-    pureGen $ shuffle (must ++ lst)
+    must' <- pureGen $ shuffle must
+    pureGen $ randomInterleaving must' lst
   genFromTypeSpec (ListSpec msz must szSpec elemS NoFold) = do
     sz0 <- genFromSizeSpec (szSpec <> geqSpec (sizeOf must) <> maybe TrueSpec (leqSpec . max 0) msz)
     let sz = fromIntegral (sz0 - sizeOf must)
@@ -236,7 +237,8 @@ instance HasSpec a => HasSpec [a] where
         (genFromSpecT elemS)
         sz
         ((`conformsToSpec` szSpec) . (+ sizeOf must) . fromIntegral)
-    pureGen $ shuffle (must ++ lst)
+    must' <- pureGen $ shuffle must
+    pureGen $ randomInterleaving must' lst
   genFromTypeSpec (ListSpec msz must szSpec elemS (FoldSpec f foldS)) = do
     let szSpec' = szSpec <> maybe TrueSpec (leqSpec . max 0) msz
     genFromFold must szSpec' elemS f foldS
@@ -265,6 +267,21 @@ instance HasSpec a => HasSpec [a] where
       <> toPredsFoldSpec x foldS
       <> satisfies (sizeOf_ x) size
       <> maybe TruePred (flip genHint x) msz
+
+randomInterleaving :: [a] -> [a] -> Gen [a]
+randomInterleaving xs ys = go xs ys (length ys)
+  where
+    go [] ys _ = pure ys
+    go xs [] _ = pure xs
+    go xs ys l = do
+      -- TODO: think about distribution here
+      i <- choose (0, l)
+      go' i xs ys (l - i)
+
+    go' _ xs [] _ = pure xs
+    go' _ [] ys _ = pure ys
+    go' 0 (x:xs) ys l = (x:) <$> go xs ys l
+    go' i xs (y:ys) l = (y:) <$> go' (i-1) xs ys l
 
 instance HasSpec a => HasGenHint [a] where
   type Hint [a] = Integer

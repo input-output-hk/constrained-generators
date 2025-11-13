@@ -101,6 +101,8 @@ import Prelude hiding (cycle, pred)
 -- generators are not flexible enough.
 genFromSpecT ::
   forall a m. (HasCallStack, HasSpec a, MonadGenError m) => Specification a -> GenT m a
+genFromSpecT (ExplainSpec [] s) = genFromSpecT s
+genFromSpecT (ExplainSpec es s) = push es (genFromSpecT s)
 genFromSpecT (simplifySpec -> spec) = case spec of
   ExplainSpec [] s -> genFromSpecT s
   ExplainSpec es s -> push es (genFromSpecT s)
@@ -947,7 +949,6 @@ genFromPreds env0 (optimisePred . optimisePred -> preds) = do
           (env', plan') <- stepPlan origPlan env plan
           go env' plan'
     go env0 origPlan
-  where
 
 -- | Push as much information we can backwards through the plan.
 backPropagation :: Set Name -> SolverPlan -> SolverPlan
@@ -1050,7 +1051,10 @@ pinnedBy :: forall a. HasSpec a => Var a -> Pred -> Maybe (Term a)
 pinnedBy x (Assert (Equal t t'))
   | V x' <- t, Just Refl <- eqVar x x' = Just t'
   | V x' <- t', Just Refl <- eqVar x x' = Just t
+pinnedBy x (ElemPred True (V x') (xs NE.:| []))
+  | Just Refl <- eqVar x x' = Just (lit xs)
 pinnedBy x (And ps) = listToMaybe $ catMaybes $ map (pinnedBy x) ps
+pinnedBy x (Explain _ p) = pinnedBy x p
 pinnedBy _ _ = Nothing
 
 -- ==================================================================================================
