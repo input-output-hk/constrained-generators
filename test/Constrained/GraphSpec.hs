@@ -97,7 +97,7 @@ prop_find_cycle_sound :: Property
 prop_find_cycle_sound =
   forAllShrink (mkGraph @Node <$> arbitrary) shrink $ \ g ->
     let c = findCycle g
-    in counterexample (show c) $ all (\(x, y) -> dependsOn x y g) (zip c (drop 1 c))
+    in counterexample (show c) $ all (\(x, y) -> dependsOn x y g) (zip c (drop 1 $ cycle c))
 
 prop_find_cycle_loops :: Property
 prop_find_cycle_loops =
