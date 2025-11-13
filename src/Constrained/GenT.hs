@@ -24,6 +24,7 @@ module Constrained.GenT (
   suchThatT,
   suchThatWithTryT,
   scaleT,
+  resizeT,
   firstGenT,
   tryGenT,
   chooseT,
@@ -34,7 +35,6 @@ module Constrained.GenT (
   vectorOfT,
   listOfUntilLenT,
   listOfT,
-  resizeT,
   strictGen,
   looseGen,
 
@@ -69,6 +69,9 @@ import GHC.Stack
 import System.Random
 import Test.QuickCheck hiding (Args, Fun)
 import Test.QuickCheck.Gen
+import Test.QuickCheck.Random
+import Control.Arrow (second)
+import Control.Monad.Trans
 
 -- ==============================================================
 -- The GE Monad
@@ -91,6 +94,62 @@ instance Monad GE where
   Result a >>= k = k a
 
 ------------------------------------------------------------------------
+-- Threading gen monad
+------------------------------------------------------------------------
+
+-- The normal Gen monad always splits the seed when doing >>=. This is for very
+-- good reasons - it lets you write generators that generate infinite data to
+-- the left of a >>= and let's your generators be very lazy!
+
+-- A traditional GenT m a implementation would inherit this splitting behaviour
+-- in order to let you keep writing infinite and lazy things to the left of >>=
+-- on the GenT m level. Now, the thing to realize about this is that unless
+-- your code is very carefully written to avoid it this means you're going to
+-- end up with unnecessary >>=s and thus unnecessary splits.
+
+-- To get around this issue of unnecessary splits we introduce a threading GenT
+-- implementation here that sacrifices letting you do infinite (and to some
+-- extent lazy) structures to the left of >>= on the GenT m level, but doesn't
+-- prohibit you from doing so on the Gen level.
+
+-- This drastically reduces the number of seed splits while still letting you
+-- write lazy and infinite generators in Gen land by being a little bit more
+-- careful. It works great for constrained-generators in particular, which has
+-- a tendency to be strict and by design avoids inifinte values.
+
+liftGenToThreading :: Monad m => Gen a -> ThreadingGenT m a
+liftGenToThreading g = ThreadingGen $ \seed size -> do
+  let (seed', seed'') = split seed
+  pure (seed'', unGen g seed' size)
+
+runThreadingGen :: Functor m => ThreadingGenT m a -> Gen (m a)
+runThreadingGen g = MkGen $ \seed size -> do
+  snd <$> unThreadingGen g seed size
+
+strictGetSize :: Applicative m => ThreadingGenT m Int
+strictGetSize = ThreadingGen $ \ seed size -> pure (seed, size)
+
+scaleThreading :: (Int -> Int) -> ThreadingGenT m a -> ThreadingGenT m a
+scaleThreading f sg = ThreadingGen $ \ seed size -> unThreadingGen sg seed (f size)
+
+newtype ThreadingGenT m a = ThreadingGen { unThreadingGen :: QCGen -> Int -> m (QCGen, a) }
+
+instance Functor m => Functor (ThreadingGenT m) where
+  fmap f (ThreadingGen g) = ThreadingGen $ \ seed size -> second f <$> g seed size
+
+instance Monad m => Applicative (ThreadingGenT m) where
+  pure a = ThreadingGen $ \ seed _ -> pure (seed, a)
+  (<*>) = ap
+
+instance Monad m => Monad (ThreadingGenT m) where
+  ThreadingGen g >>= k = ThreadingGen $ \ seed size -> do
+    (seed', a) <- g seed size
+    unThreadingGen (k a) seed' size
+
+instance MonadTrans ThreadingGenT where
+  lift m = ThreadingGen $ \ seed _ -> (seed,) <$> m
+
+------------------------------------------------------------------------
 -- The GenT monad
 -- An environment monad on top of GE
 ------------------------------------------------------------------------
@@ -108,19 +167,17 @@ data GenMode
 
 -- | A `Gen` monad wrapper that allows different generation modes and different
 -- failure types.
-newtype GenT m a = GenT {runGenT :: GenMode -> [NonEmpty String] -> Gen (m a)}
+newtype GenT m a = GenT {runGenT :: GenMode -> [NonEmpty String] -> ThreadingGenT m a}
   deriving (Functor)
 
 instance Monad m => Applicative (GenT m) where
-  pure a = GenT (\_ _ -> pure @Gen (pure @m a))
+  pure a = GenT (\_ _ -> pure a)
   (<*>) = ap
 
--- I think this might be an inlined use of the Gen monad transformer?
 instance Monad m => Monad (GenT m) where
-  GenT m >>= k = GenT $ \mode -> \msgs -> MkGen $ \r n -> do
-    let (r1, r2) = split r
-    a <- unGen (m mode msgs) r1 n
-    unGen (runGenT (k a) mode msgs) r2 n
+  GenT m >>= k = GenT $ \mode msgs -> do
+    a <- m mode msgs
+    runGenT (k a) mode msgs
 
 instance MonadGenError m => MonadFail (GenT m) where
   fail s = genError s
@@ -168,15 +225,15 @@ instance MonadGenError GE where
 
 -- | calls to genError and fatalError, add the stacked messages in the monad.
 instance MonadGenError m => MonadGenError (GenT m) where
-  genErrorNE e = GenT $ \_ xs -> pure $ genErrors (add e xs)
-  genErrors es = GenT $ \_ xs -> pure $ genErrors (cat es xs)
+  genErrorNE e = GenT $ \_ xs -> lift $ genErrors (add e xs)
+  genErrors es = GenT $ \_ xs -> lift $ genErrors (cat es xs)
 
   -- Perhaps we want to turn genError into fatalError, if mode_ is Strict?
-  fatalErrorNE e = GenT $ \_ xs -> pure $ fatalErrors (add e xs)
-  fatalErrors es = GenT $ \_ xs -> pure $ fatalErrors (cat es xs)
+  fatalErrorNE e = GenT $ \_ xs -> lift $ fatalErrors (add e xs)
+  fatalErrors es = GenT $ \_ xs -> lift $ fatalErrors (cat es xs)
 
   -- Perhaps we want to turn fatalError into genError, if mode_ is Loose?
-  explainNE e (GenT f) = GenT $ \mode es -> fmap (explainNE e) (f mode es)
+  explainNE e (GenT f) = GenT $ \mode es -> ThreadingGen $ \ seed size -> explainNE e $ unThreadingGen (f mode es) seed size
 
 -- ====================================================
 -- useful operations on NonEmpty
@@ -270,29 +327,25 @@ listFromGE = fromGE (const []) . explain "listFromGE"
 -- Useful operations on GenT
 
 -- | Run a t`GenT` generator in `Strict` mode
-strictGen :: GenT m a -> Gen (m a)
-strictGen genT = runGenT genT Strict []
+strictGen :: Functor m => GenT m a -> Gen (m a)
+strictGen genT = runThreadingGen $ runGenT genT Strict []
 
 -- | Run a t`GenT` generator in `Loose` mode
-looseGen :: GenT m a -> Gen (m a)
-looseGen genT = runGenT genT Loose []
+looseGen :: Functor m => GenT m a -> Gen (m a)
+looseGen genT = runThreadingGen $ runGenT genT Loose []
 
 -- | Turn a t`GenT` generator into a `Gen` generator in `Strict` mode
 genFromGenT :: GenT GE a -> Gen a
 genFromGenT genT = errorGE <$> strictGen genT
 
--- | Locally change the generation size
-resizeT :: (Int -> Int) -> GenT m a -> GenT m a
-resizeT f (GenT gm) = GenT $ \mode msgs -> sized $ \sz -> resize (f sz) (gm mode msgs)
-
 -- | Turn a `Gen` generator into a t`GenT` generator that never fails.
-pureGen :: Applicative m => Gen a -> GenT m a
-pureGen gen = GenT $ \_ _ -> pure <$> gen
+pureGen :: Monad m => Gen a -> GenT m a
+pureGen gen = GenT $ \_ _ -> liftGenToThreading gen
 
 -- | Lift `listOf` to t`GenT`
 listOfT :: MonadGenError m => GenT GE a -> GenT m [a]
 listOfT gen = do
-  lst <- pureGen . listOf $ runGenT gen Loose []
+  lst <- pureGen . listOf $ runThreadingGen $ runGenT gen Loose []
   catGEs lst
 
 -- | Generate a list of elements of length at most @goalLen@, but accepting
@@ -310,18 +363,18 @@ listOfUntilLenT gen goalLen validLen =
   genList `suchThatT` validLen . length
   where
     genList = do
-      res <- pureGen . vectorOf goalLen $ runGenT gen Loose []
+      res <- pureGen . vectorOf goalLen $ runThreadingGen $ runGenT gen Loose []
       catGEs res
 
 -- | Lift `vectorOf` to t`GenT`
 vectorOfT :: MonadGenError m => Int -> GenT GE a -> GenT m [a]
 vectorOfT i gen = GenT $ \mode _ -> do
-  res <- fmap sequence . vectorOf i $ runGenT gen Strict []
+  res <- liftGenToThreading $ fmap sequence . vectorOf i $ runThreadingGen $ runGenT gen Strict []
   case mode of
-    Strict -> pure $ runGE res
+    Strict -> lift $ runGE res
     Loose -> case res of
-      FatalError es -> pure $ genErrors es
-      _ -> pure $ runGE res
+      FatalError es -> lift $ genErrors es
+      _ -> lift $ runGE res
 
 infixl 2 `suchThatT`
 
@@ -351,16 +404,20 @@ suchThatWithTryT tries g p = do
 
 -- | Lift `scale` to t`GenT`
 scaleT :: (Int -> Int) -> GenT m a -> GenT m a
-scaleT sc (GenT gen) = GenT $ \mode msgs -> scale sc $ gen mode msgs
+scaleT sc (GenT gen) = GenT $ \mode msgs -> scaleThreading sc $ gen mode msgs
+
+-- | Lift `resize` to t`GenT`
+resizeT :: Int -> GenT m a -> GenT m a
+resizeT = scaleT . const
 
 -- | Access the `GenMode` we are running in, useful to decide e.g.  if we want
 -- to re-try in case of a `GenError` or give up
-getMode :: Applicative m => GenT m GenMode
-getMode = GenT $ \mode _ -> pure (pure mode)
+getMode :: Monad m => GenT m GenMode
+getMode = GenT $ \mode _ -> pure mode
 
 -- | Get the current stack of `explain` above you
-getMessages :: Applicative m => GenT m [NonEmpty String]
-getMessages = GenT $ \_ msgs -> pure (pure msgs)
+getMessages :: Monad m => GenT m [NonEmpty String]
+getMessages = GenT $ \_ msgs -> pure msgs
 
 -- | Locally change the generation mode
 withMode :: GenMode -> GenT m a -> GenT m a
@@ -377,7 +434,7 @@ frequencyT gs = do
   msgs <- getMessages
   r <-
     explain "suchThatT in oneofT" $
-      pureGen (frequency [(f, runGenT g mode msgs) | (f, g) <- gs]) `suchThatT` isOk
+      pureGen (frequency [(f, runThreadingGen $ runGenT g mode msgs) | (f, g) <- gs]) `suchThatT` isOk
   runGE r
 
 -- | Lift `choose` to t`GenT`, failing with a `genError` in case of an empty interval
@@ -388,7 +445,7 @@ chooseT (a, b)
 
 -- | Get the size provided to the generator
 sizeT :: Monad m => GenT m Int
-sizeT = GenT $ \mode msgs -> sized $ \n -> runGenT (pure n) mode msgs
+sizeT = GenT $ \_ _ -> strictGetSize
 
 -- ==================================================================
 -- Reflective analysis of the internal GE structure of (GenT GE x)
@@ -396,10 +453,8 @@ sizeT = GenT $ \mode msgs -> sized $ \n -> runGenT (pure n) mode msgs
 -- the program to control what happens in those cases.
 
 -- | Always succeeds, but returns the internal GE structure for analysis
-inspect :: forall m x. MonadGenError m => GenT GE x -> GenT m (GE x)
-inspect (GenT f) = GenT g
-  where
-    g mode msgs = do geThing <- f mode msgs; pure @Gen (pure @m geThing)
+inspect :: forall m a. MonadGenError m => GenT GE a -> GenT m (GE a)
+inspect (GenT f) = GenT $ \ mode msgs -> liftGenToThreading $ runThreadingGen $ f mode msgs
 
 -- | Ignore all kinds of Errors, by squashing them into Nothing
 tryGenT :: MonadGenError m => GenT GE a -> GenT m (Maybe a)
