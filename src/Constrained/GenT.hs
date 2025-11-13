@@ -97,6 +97,26 @@ instance Monad GE where
 -- Threading gen monad
 ------------------------------------------------------------------------
 
+-- The normal Gen monad always splits the seed when doing >>=. This is for very
+-- good reasons - it lets you write generators that generate infinite data to
+-- the left of a >>= and let's your generators be very lazy!
+
+-- A traditional GenT m a implementation would inherit this splitting behaviour
+-- in order to let you keep writing infinite and lazy things to the left of >>=
+-- on the GenT m level. Now, the thing to realize about this is that unless
+-- your code is very carefully written to avoid it this means you're going to
+-- end up with unnecessary >>=s and thus unnecessary splits.
+
+-- To get around this issue of unnecessary splits we introduce a threading GenT
+-- implementation here that sacrifices letting you do infinite (and to some
+-- extent lazy) structures to the left of >>= on the GenT m level, but doesn't
+-- prohibit you from doing so on the Gen level.
+
+-- This drastically reduces the number of seed splits while still letting you
+-- write lazy and infinite generators in Gen land by being a little bit more
+-- careful. It works great for constrained-generators in particular, which has
+-- a tendency to be strict and by design avoids inifinte values.
+
 liftGenToThreading :: Monad m => Gen a -> ThreadingGenT m a
 liftGenToThreading g = ThreadingGen $ \seed size -> do
   let (seed', seed'') = split seed
