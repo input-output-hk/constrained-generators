@@ -25,7 +25,7 @@ module Constrained.Graph (
 
 import Control.Monad
 import Data.Foldable
-import Data.List (sortOn, nub)
+import Data.List (nub)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe
@@ -33,6 +33,8 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Prettyprinter
 import Test.QuickCheck
+-- TODO: consider using more of this
+import Data.Graph qualified as G
 
 -- | A graph with unlabeled edges for keeping track of dependencies
 data Graph node = Graph
@@ -166,21 +168,22 @@ topsort gr@(Graph e _) = go [] e
               removeNode n ds = Set.difference ds noDeps <$ guard (not $ n `Set.member` noDeps)
           if not $ null noDeps
             then go (Set.toList noDeps ++ order) (Map.mapMaybeWithKey removeNode g)
-            else Left . concat . take 1 . sortOn length . filter (not . null) . map (findCycle gr) $ Map.keys e
+            else Left $ findCycle gr
 
 -- | Simple DFS cycle finding
-findCycle :: Ord node => Graph node -> node -> [node]
-findCycle g@(Graph e _) node = concat . take 1 $ filter loopy $ go mempty node
+findCycle :: Ord node => Graph node -> [node]
+findCycle g@(Graph e _) = mkCycle . concat . take 1 . filter isCyclic . map (map tr) . concatMap cycles . G.scc $ gr
   where
-    loopy [] = False
-    loopy c@(x:_) = dependsOn (last c) x g
-    go seen n
-      | n `Set.member` seen = [[]]
-      | otherwise = do
-          n' <- neighbours
-          (n :) <$> go (Set.insert n seen) n'
-      where
-        neighbours = maybe [] Set.toList $ Map.lookup n e
+    edgeList =  [ (n, n, Set.toList es) | (n, es) <- Map.toList e ]
+    (gr, tr0, _) = G.graphFromEdges edgeList
+    tr x = let (n, _, _) = tr0 x in n
+    cycles (G.Node a []) = [[a]]
+    cycles (G.Node a as) = (a:) <$> concatMap cycles as
+    isCyclic [] = False
+    isCyclic [a] = dependsOn a a g
+    isCyclic _ = True
+    -- Removes a non-dependent stem from the start of the dependencies
+    mkCycle ns = let l = last ns in dropWhile (\ n -> not $ dependsOn l n g) ns
 
 -- | Get the dependencies of a node in the graph, `mempty` if the node is not
 -- in the graph
