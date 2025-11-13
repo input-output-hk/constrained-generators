@@ -1,9 +1,9 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
@@ -76,7 +76,7 @@ find env var = do
 -- | Filter the keys in an env, useful for removing irrelevant variables in
 -- error messages
 filterKeys :: Env -> (forall a. Typeable a => Var a -> Bool) -> Env
-filterKeys (Env m) f = Env $ Map.filterWithKey (\ (EnvKey k) _ -> f k) m
+filterKeys (Env m) f = Env $ Map.filterWithKey (\(EnvKey k) _ -> f k) m
 
 instance Pretty EnvValue where
   pretty (EnvValue x) = viaShow x

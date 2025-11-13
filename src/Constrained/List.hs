@@ -169,7 +169,7 @@ class TypeList ts where
   curryList_ :: (forall a. a -> f a) -> (List f ts -> r) -> FunTy ts r
 
   -- | Materialize the shape of the type list @as@, this is very useful
-  -- for avoiding having to write type classes that recurse over @as@.
+  --     for avoiding having to write type classes that recurse over @as@.
   listShape :: List (Const ()) ts
 
 -- | NOTE: the two instances for `TypeList` are @`TypeList` []@ and

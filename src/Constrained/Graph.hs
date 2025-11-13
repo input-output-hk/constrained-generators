@@ -25,7 +25,7 @@ module Constrained.Graph (
 
 import Control.Monad
 import Data.Foldable
-import Data.List (sortOn, nub)
+import Data.List (nub, sortOn)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe
@@ -61,33 +61,51 @@ instance Pretty n => Pretty (Graph n) where
 
 -- | Construct a graph
 mkGraph :: Ord node => Map node (Set node) -> Graph node
-mkGraph e0 = Graph e $ Map.unionsWith (<>)
-                          [ Map.fromList $ (p, mempty) : [ (c, Set.singleton p)
-                                                         | c <- Set.toList cs
-                                                         ]
-                          | (p, cs) <- Map.toList e
-                          ]
-  where e = Map.unionWith (<>) e0 (Map.fromList [ (c, mempty) | (_, cs) <- Map.toList e0
-                                                              , c <- Set.toList cs
-                                                ])
+mkGraph e0 =
+  Graph e $
+    Map.unionsWith
+      (<>)
+      [ Map.fromList $
+          (p, mempty)
+            : [ (c, Set.singleton p)
+              | c <- Set.toList cs
+              ]
+      | (p, cs) <- Map.toList e
+      ]
+  where
+    e =
+      Map.unionWith
+        (<>)
+        e0
+        ( Map.fromList
+            [ (c, mempty)
+            | (_, cs) <- Map.toList e0
+            , c <- Set.toList cs
+            ]
+        )
 
 instance (Arbitrary node, Ord node) => Arbitrary (Graph node) where
   arbitrary =
-    frequency [ (1, mkGraph <$> arbitrary)
-              , (3, do order <- nub <$> arbitrary
-                       mkGraph <$> buildGraph order
-                )
-              ]
-    where buildGraph [] = return mempty
-          buildGraph [n] = return (Map.singleton n mempty)
-          buildGraph (n:ns) = do
-            deps <- listOf (elements ns)
-            Map.insert n (Set.fromList deps) <$> buildGraph ns
+    frequency
+      [ (1, mkGraph <$> arbitrary)
+      ,
+        ( 3
+        , do
+            order <- nub <$> arbitrary
+            mkGraph <$> buildGraph order
+        )
+      ]
+    where
+      buildGraph [] = return mempty
+      buildGraph [n] = return (Map.singleton n mempty)
+      buildGraph (n : ns) = do
+        deps <- listOf (elements ns)
+        Map.insert n (Set.fromList deps) <$> buildGraph ns
   shrink g =
     [ mkGraph e'
     | e <- shrink (edges g)
-    -- If we don't do this it's very easy to introduce a shrink-loop
-    , let e' = fmap (\ xs -> Set.filter (`Map.member` e) xs) e
+    , -- If we don't do this it's very easy to introduce a shrink-loop
+    let e' = fmap (\xs -> Set.filter (`Map.member` e) xs) e
     ]
 
 -- | Get all the nodes of a graph
@@ -140,7 +158,7 @@ transitiveDependencies :: Ord node => node -> Graph node -> Set node
 transitiveDependencies x (Graph e _) = go mempty (Set.toList $ fromMaybe mempty $ Map.lookup x e)
   where
     go deps [] = deps
-    go deps (y:ys)
+    go deps (y : ys)
       | y `Set.member` deps = go deps ys
       | otherwise = go (Set.insert y deps) (ys ++ Set.toList (fromMaybe mempty $ Map.lookup y e))
 
@@ -173,7 +191,7 @@ findCycle :: Ord node => Graph node -> node -> [node]
 findCycle g@(Graph e _) node = concat . take 1 $ filter loopy $ go mempty node
   where
     loopy [] = False
-    loopy c@(x:_) = dependsOn (last c) x g
+    loopy c@(x : _) = dependsOn (last c) x g
     go seen n
       | n `Set.member` seen = [[]]
       | otherwise = do

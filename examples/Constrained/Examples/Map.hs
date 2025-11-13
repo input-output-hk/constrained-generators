@@ -128,13 +128,13 @@ mapIsJust = constrained' $ \ [var| x |] [var| y |] ->
 
 eitherKeys :: Specification ([Int], [Int], Map (Either Int Int) Int)
 eitherKeys = constrained' $ \ [var| as |] [var| bs |] [var| m |] ->
-  [
-    forAll' m $ \ [var| k |] _v ->
-      [ caseOn k
-          (branch $ \ a -> a `elem_` as)
-          (branch $ \ b -> b `elem_` bs)
-      , reify as (map Left) $ \ ls ->
-        reify bs (map Right) $ \ rs ->
-          k `elem_` ls ++. rs
+  [ forAll' m $ \ [var| k |] _v ->
+      [ caseOn
+          k
+          (branch $ \a -> a `elem_` as)
+          (branch $ \b -> b `elem_` bs)
+      , reify as (map Left) $ \ls ->
+          reify bs (map Right) $ \rs ->
+            k `elem_` ls ++. rs
       ]
   ]

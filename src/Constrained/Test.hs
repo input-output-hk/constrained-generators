@@ -25,7 +25,7 @@ module Constrained.Test (
   prop_propagateSpecSound,
   prop_gen_sound,
   specType,
-  TestableFn(..),
+  TestableFn (..),
 ) where
 
 import Constrained.API.Extend
@@ -41,16 +41,16 @@ import Constrained.Spec.List
 import Constrained.Spec.Map
 import Constrained.Spec.Set
 import Constrained.TheKnot
+import Data.Int
 import Data.List (nub)
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import Data.Set (Set)
 import Data.Typeable (Typeable, typeOf)
+import Data.Word
 import Prettyprinter
 import Test.QuickCheck hiding (Fun)
 import qualified Test.QuickCheck as QC
-import Data.Word
-import Data.Int
 
 -- | Check that a generator from a given `Specification` is sound, it never
 -- generates a bad value that doesn't satisfy the constraint
@@ -400,8 +400,8 @@ instance QC.Arbitrary TestableFn where
       , TestableFn $ MultW @Int
       , TestableFn $ MultW @Integer
       , TestableFn $ SignumW @Integer
-      -- These are representative of the bounded types
-      , TestableFn $ MultW @Word8
+      , -- These are representative of the bounded types
+        TestableFn $ MultW @Word8
       , TestableFn $ SignumW @Word8
       , TestableFn $ MultW @Int8
       , TestableFn $ MultW @Float

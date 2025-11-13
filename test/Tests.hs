@@ -1,7 +1,7 @@
 module Main where
 
-import Constrained.Tests as Tests
 import Constrained.GraphSpec as Graph
+import Constrained.Tests as Tests
 import Data.Maybe
 import System.Environment
 import Test.Hspec

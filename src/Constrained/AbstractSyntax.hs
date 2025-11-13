@@ -181,7 +181,7 @@ data PredD deps where
   And :: [PredD deps] -> PredD deps
   Exists ::
     -- | Constructive recovery function for checking
-    -- existential quantification
+    --         existential quantification
     ((forall b. TermD deps b -> b) -> GE a) ->
     BinderD deps a ->
     PredD deps
@@ -238,9 +238,9 @@ data PredD deps where
     ) =>
     TermD deps (SumOver as) ->
     -- | Each branch of the type is bound with
-    -- only one variable because `as` are types.
-    -- Constructors with multiple arguments are
-    -- encoded with `ProdOver` (c.f. `Constrained.Univ`).
+    --         only one variable because `as` are types.
+    --         Constructors with multiple arguments are
+    --         encoded with `ProdOver` (c.f. `Constrained.Univ`).
     List (Weighted (BinderD deps)) as ->
     PredD deps
   -- monadic-style `when` - if the first argument is False the second
@@ -353,11 +353,11 @@ data SpecificationD deps a where
     NE.NonEmpty String ->
     SpecificationD deps a
   -- | The set described by some predicates
-  -- over the bound variable.
+  --     over the bound variable.
   SuspendedSpec ::
     HasSpecD deps a =>
     -- | This variable ranges over values denoted by
-    -- the spec
+    --         the spec
     Var a ->
     -- | And the variable is subject to these constraints
     PredD deps ->

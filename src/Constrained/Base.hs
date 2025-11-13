@@ -32,7 +32,7 @@ module Constrained.Base (
   pattern (:<:),
   pattern (:>:),
   pattern Unary,
-  Ctx(..),
+  Ctx (..),
   toCtx,
   flipCtx,
   fromListCtx,
@@ -478,8 +478,8 @@ class
   combineSpec :: TypeSpec a -> TypeSpec a -> Specification a
 
   -- | Generate a value that satisfies the `TypeSpec`.
-  -- The key property for this generator is soundness:
-  --  ∀ a ∈ genFromTypeSpec spec. a `conformsTo` spec
+  --     The key property for this generator is soundness:
+  --     ∀ a ∈ genFromTypeSpec spec. a `conformsTo` spec
   genFromTypeSpec :: (HasCallStack, MonadGenError m) => TypeSpec a -> GenT m a
 
   -- | Check conformance to the spec.
@@ -489,22 +489,22 @@ class
   shrinkWithTypeSpec :: TypeSpec a -> a -> [a]
 
   -- | Try to make an `a` conform to `TypeSpec` with minimal changes. When
-  -- `fixupWithSpec ts a` returns `Just a'`, it should be the case that
-  -- `conformsTo a' ts`. There are no constraints in the `Nothing` case. A
-  -- non-trivial implementation of this function is important for shrinking.
+  --     `fixupWithSpec ts a` returns `Just a'`, it should be the case that
+  --     `conformsTo a' ts`. There are no constraints in the `Nothing` case. A
+  --     non-trivial implementation of this function is important for shrinking.
   fixupWithTypeSpec :: TypeSpec a -> a -> Maybe a
 
   -- | Convert a spec to predicates:
-  -- The key property here is:
-  --   ∀ a. a `conformsTo` spec == a `conformsTo` constrained (\t -> toPreds t spec)
+  --     The key property here is:
+  --     ∀ a. a `conformsTo` spec == a `conformsTo` constrained (\t -> toPreds t spec)
   toPreds :: Term a -> TypeSpec a -> Pred
 
   -- | Compute an upper and lower bound on the number of solutions genFromTypeSpec might return
   cardinalTypeSpec :: TypeSpec a -> Specification Integer
 
   -- | A bound on the number of solutions `genFromTypeSpec TrueSpec` can produce.
-  --   For a type with finite elements, we can get a much more accurate
-  --   answer than TrueSpec
+  --     For a type with finite elements, we can get a much more accurate
+  --     answer than TrueSpec
   cardinalTrueSpec :: Specification Integer
   cardinalTrueSpec = TrueSpec
 
@@ -527,26 +527,26 @@ class
   alternateShow _ = NonBinary
 
   -- | For some types (especially finite ones) there may be much better ways to construct
-  --   a Specification than the default method of just adding a large 'bad' list to TypSpec. This
-  --   function allows each HasSpec instance to decide.
+  --     a Specification than the default method of just adding a large 'bad' list to TypSpec. This
+  --     function allows each HasSpec instance to decide.
   typeSpecOpt :: TypeSpec a -> [a] -> Specification a
   typeSpecOpt tySpec bad = TypeSpec tySpec bad
 
   -- | This can be used to detect self inconsistencies in a (TypeSpec t)
-  --   Note this is similar to 'typeSpecHasError', and the default
-  --   value for 'typeSpecHasError' is written in terms of 'guardTypeSpec'
-  --   Both 'typeSpecHasError' and 'guardTypeSpec' can be set individually.
+  --     Note this is similar to 'typeSpecHasError', and the default
+  --     value for 'typeSpecHasError' is written in terms of 'guardTypeSpec'
+  --     Both 'typeSpecHasError' and 'guardTypeSpec' can be set individually.
   guardTypeSpec :: [String] -> TypeSpec a -> Specification a
   guardTypeSpec _ ty = typeSpec ty
 
   -- | Prerequisites for the instance that are sometimes necessary
-  -- when working with e.g. `Specification`s or functions in the universe.
+  --     when working with e.g. `Specification`s or functions in the universe.
   type Prerequisites a :: Constraint
 
   type Prerequisites a = ()
 
   -- | Materialize the `Prerequisites` dictionary. It should not be necessary to
-  -- implement this function manually.
+  --     implement this function manually.
   prerequisites :: Evidence (Prerequisites a)
   default prerequisites :: Prerequisites a => Evidence (Prerequisites a)
   prerequisites = Evidence
@@ -675,7 +675,7 @@ instance Show (BaseW d r) where
   show ToGenericW = "toSimpleRep"
   show FromGenericW = "fromSimpleRep"
 
-instance Syntax BaseW where
+instance Syntax BaseW
 
 instance Semantics BaseW where
   semantics FromGenericW = fromSimpleRep

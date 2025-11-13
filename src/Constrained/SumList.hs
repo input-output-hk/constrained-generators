@@ -625,7 +625,8 @@ instance Show t => Show (Solution t) where
 newtype Cost = Cost Int deriving (Eq, Show, Num, Ord)
 
 firstYesG ::
-  Monad m => Solution t -> (x -> Cost -> m (Cost, Solution t)) -> [x] -> Cost -> m (Cost, Solution t)
+  Monad m =>
+  Solution t -> (x -> Cost -> m (Cost, Solution t)) -> [x] -> Cost -> m (Cost, Solution t)
 firstYesG nullSolution f xs c = go xs c
   where
     go [] cost = pure (cost, nullSolution)

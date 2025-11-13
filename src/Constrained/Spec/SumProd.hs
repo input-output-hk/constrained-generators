@@ -594,8 +594,8 @@ chooseSpec (w, s) (w', s') =
           p
           (branch $ \_ -> (x `satisfies` s))
           (branch $ \_ -> (x `satisfies` s'))
-      -- This is a bit ugly :(
-      , caseOn
+      , -- This is a bit ugly :(
+        caseOn
           p
           (branchW w $ \_ -> True)
           (branchW w' $ \_ -> True)
