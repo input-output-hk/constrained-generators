@@ -1,4 +1,5 @@
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -721,6 +722,7 @@ mkCase tm cs
   | Semigroup.getAll $ foldMapList isTrueBinder cs = TruePred
   | Semigroup.getAll $ foldMapList (isFalseBinder . thing) cs = FalsePred (pure "mkCase on all False")
   | Lit a <- tm = runCaseOn a (mapList thing cs) (\x val p -> substPred (Env.singleton x val) p)
+  | Just es <- buildElemList cs = ElemPred True tm es
   | otherwise = Case tm cs
   where
     isTrueBinder (Weighted Nothing (_ :-> TruePred)) = Semigroup.All True
@@ -728,6 +730,17 @@ mkCase tm cs
 
     isFalseBinder (_ :-> FalsePred {}) = Semigroup.All True
     isFalseBinder _ = Semigroup.All False
+
+buildElemList :: List (Weighted Binder) as -> Maybe (NE.NonEmpty (SumOver as))
+buildElemList Nil = Nothing
+buildElemList (Weighted Nothing (x :-> ElemPred True (V x') as) :> xs)
+  | Just Refl <- eqVar x x' =
+    case xs of
+      Nil -> Just as
+      _ :> _ -> do
+        rest <- buildElemList xs
+        return $ fmap SumLeft as <> fmap SumRight rest
+buildElemList _ = Nothing
 
 -- | Run a `caseOn`
 runCaseOn ::

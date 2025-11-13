@@ -205,6 +205,7 @@ tests nightly =
     testSpec "composeEvenSpec" composeEvenSpec
     testSpec "oddSpec" oddSpec
     testSpec "composeOddSpec" composeOddSpec
+    testSpec "keysExample" keysExample
 
 negativeTests :: Spec
 negativeTests =

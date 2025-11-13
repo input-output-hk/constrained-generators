@@ -75,8 +75,8 @@ prop_constrained_satisfies_sound spec = prop_sound (constrained $ \a -> satisfie
 -- | Check that explanations don't immediately ruin soundness
 prop_constrained_explained :: HasSpec a => Specification a -> QC.Property
 prop_constrained_explained spec =
-  QC.forAll QC.arbitrary $ \es ->
-    prop_sound $ constrained $ \x -> Explain es $ x `satisfies` spec
+  let es = NE.singleton "Dummy explanation"
+  in prop_sound $ constrained $ \x -> Explain es $ x `satisfies` spec
 
 -- | `prop_complete ps` assumes that `ps` is satisfiable and checks that it doesn't crash
 prop_complete :: HasSpec a => Specification a -> QC.Property

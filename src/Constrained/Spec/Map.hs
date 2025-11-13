@@ -179,7 +179,7 @@ instance
               fold
                 [ maybe TrueSpec (leqSpec . max 0) mHint
                 , size
-                , maxSpec (cardinality (fstSpec kvs)) -- (mapSpec FstW  (mapSpec ToGenericW kvs)))
+                , maxSpec (cardinality (fstSpec kvs))
                 , maxSpec (cardinalTrueSpec @k)
                 , geqSpec 0
                 ]
