@@ -105,12 +105,12 @@ pairView :: Term (Prod a b) -> Maybe (Term a, Term b)
 pairView (App (getWitness -> Just ProdW) (x :> y :> Nil)) = Just (x, y)
 pairView _ = Nothing
 
-cartesian
-  :: forall a b
-   . (HasSpec a, HasSpec b)
-  => Specification a
-  -> Specification b
-  -> Specification (Prod a b)
+cartesian ::
+  forall a b.
+  (HasSpec a, HasSpec b) =>
+  Specification a ->
+  Specification b ->
+  Specification (Prod a b)
 cartesian (ErrorSpec es) (ErrorSpec fs) = ErrorSpec (es <> fs)
 cartesian (ErrorSpec es) _ = ErrorSpec (NE.cons "cartesian left" es)
 cartesian _ (ErrorSpec es) = ErrorSpec (NE.cons "cartesian right" es)
@@ -260,16 +260,16 @@ sameSnd :: Eq a1 => a1 -> [Prod a2 a1] -> [a2]
 sameSnd b ps = [a | Prod a b' <- ps, b == b']
 
 -- | Pattern for `prod_`
-pattern Product
-  :: forall c
-   . ()
-  => forall a b
-   . ( c ~ Prod a b
-     , AppRequires ProdW '[a, b] (Prod a b)
-     )
-  => Term a
-  -> Term b
-  -> Term c
+pattern Product ::
+  forall c.
+  () =>
+  forall a b.
+  ( c ~ Prod a b
+  , AppRequires ProdW '[a, b] (Prod a b)
+  ) =>
+  Term a ->
+  Term b ->
+  Term c
 pattern Product x y <- (App (getWitness -> Just ProdW) (x :> y :> Nil))
 
 -- ================================================================
@@ -303,32 +303,32 @@ class Sized t where
   sizeOf = sizeOf . toSimpleRep
 
   liftSizeSpec :: HasSpec t => SizeSpec -> [Integer] -> Specification t
-  default liftSizeSpec
-    :: ( Sized (SimpleRep t)
-       , GenericRequires t
-       )
-    => SizeSpec
-    -> [Integer]
-    -> Specification t
+  default liftSizeSpec ::
+    ( Sized (SimpleRep t)
+    , GenericRequires t
+    ) =>
+    SizeSpec ->
+    [Integer] ->
+    Specification t
   liftSizeSpec sz cant = fromSimpleRepSpec $ liftSizeSpec sz cant
 
   liftMemberSpec :: HasSpec t => [Integer] -> Specification t
-  default liftMemberSpec
-    :: ( Sized (SimpleRep t)
-       , GenericRequires t
-       )
-    => [Integer]
-    -> Specification t
+  default liftMemberSpec ::
+    ( Sized (SimpleRep t)
+    , GenericRequires t
+    ) =>
+    [Integer] ->
+    Specification t
   liftMemberSpec = fromSimpleRepSpec . liftMemberSpec
 
   sizeOfTypeSpec :: HasSpec t => TypeSpec t -> Specification Integer
-  default sizeOfTypeSpec
-    :: ( HasSpec (SimpleRep t)
-       , Sized (SimpleRep t)
-       , TypeSpec t ~ TypeSpec (SimpleRep t)
-       )
-    => TypeSpec t
-    -> Specification Integer
+  default sizeOfTypeSpec ::
+    ( HasSpec (SimpleRep t)
+    , Sized (SimpleRep t)
+    , TypeSpec t ~ TypeSpec (SimpleRep t)
+    ) =>
+    TypeSpec t ->
+    Specification Integer
   sizeOfTypeSpec = sizeOfTypeSpec @(SimpleRep t)
 
 -- =============================================================
@@ -342,15 +342,15 @@ class Sized t where
 -- | Function symbols for basic higher-order functions
 data FunW (dom :: [Type]) (rng :: Type) where
   IdW :: forall a. FunW '[a] a
-  ComposeW
-    :: forall b t1 t2 a r
-     . ( AppRequires t1 '[b] r
-       , AppRequires t2 '[a] b
-       , HasSpec b
-       )
-    => t1 '[b] r
-    -> t2 '[a] b
-    -> FunW '[a] r
+  ComposeW ::
+    forall b t1 t2 a r.
+    ( AppRequires t1 '[b] r
+    , AppRequires t2 '[a] b
+    , HasSpec b
+    ) =>
+    t1 '[b] r ->
+    t2 '[a] b ->
+    FunW '[a] r
 
 instance Semantics FunW where
   semantics IdW = id
@@ -367,12 +367,12 @@ instance Eq (FunW dom rng) where
   ComposeW f f' == ComposeW g g' = compareWit f g && compareWit f' g'
   _ == _ = False
 
-compareWit
-  :: forall t1 bs1 r1 t2 bs2 r2
-   . (AppRequires t1 bs1 r1, AppRequires t2 bs2 r2)
-  => t1 bs1 r1
-  -> t2 bs2 r2
-  -> Bool
+compareWit ::
+  forall t1 bs1 r1 t2 bs2 r2.
+  (AppRequires t1 bs1 r1, AppRequires t2 bs2 r2) =>
+  t1 bs1 r1 ->
+  t2 bs2 r2 ->
+  Bool
 compareWit x y = case (eqT @t1 @t2, eqT @bs1 @bs2, eqT @r1 @r2) of
   (Just Refl, Just Refl, Just Refl) -> x == y
   _ -> False
@@ -397,15 +397,15 @@ instance Logic FunW where
 
 -- | Invert a `Fun` and combine it with a `Specification` for the input to
 -- generate a value
-genInverse
-  :: ( MonadGenError m
-     , HasSpec a
-     , HasSpec b
-     )
-  => Fun '[a] b
-  -> Specification a
-  -> b
-  -> GenT m a
+genInverse ::
+  ( MonadGenError m
+  , HasSpec a
+  , HasSpec b
+  ) =>
+  Fun '[a] b ->
+  Specification a ->
+  b ->
+  GenT m a
 genInverse (Fun f) argS x =
   let argSpec' = argS <> propagate f (HOLE :? Nil) (equalSpec x)
    in explainNE

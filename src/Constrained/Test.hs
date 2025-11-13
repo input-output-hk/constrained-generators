@@ -54,10 +54,10 @@ import qualified Test.QuickCheck as QC
 
 -- | Check that a generator from a given `Specification` is sound, it never
 -- generates a bad value that doesn't satisfy the constraint
-prop_sound
-  :: HasSpec a
-  => Specification a
-  -> QC.Property
+prop_sound ::
+  HasSpec a =>
+  Specification a ->
+  QC.Property
 prop_sound spec =
   QC.forAllBlind (strictGen $ genFromSpecT spec) $ \ma ->
     case ma of
@@ -105,11 +105,11 @@ prop_shrink_sound s =
             conformsToSpecProp a' s
 
 -- | Check that anything conforms to the trivial specification
-prop_conformEmpty
-  :: forall a
-   . HasSpec a
-  => a
-  -> QC.Property
+prop_conformEmpty ::
+  forall a.
+  HasSpec a =>
+  a ->
+  QC.Property
 prop_conformEmpty a = QC.property $ conformsTo a (emptySpec @a)
 
 -- | Check that propagation works properly
@@ -162,12 +162,12 @@ specType TrueSpec {} = "TrueSpec"
 -- But includes inside in the constraints, everything needed to
 -- use the function symbol
 
-showCtxWith
-  :: forall fn as b
-   . AppRequires fn as b
-  => fn as b
-  -> TestableCtx as
-  -> String
+showCtxWith ::
+  forall fn as b.
+  AppRequires fn as b =>
+  fn as b ->
+  TestableCtx as ->
+  String
 showCtxWith fn (TestableCtx ctx) = show tm
   where
     tm :: Term b
@@ -176,39 +176,39 @@ showCtxWith fn (TestableCtx ctx) = show tm
         fillListCtx (mapListCtxC @HasSpec @_ @Value @Term (lit @_ . unValue) ctx) (\HOLE -> V $ Var 0 "v")
 
 data TestableFn where
-  TestableFn
-    :: ( QC.Arbitrary (Specification b)
-       , Typeable (FunTy as b)
-       , AppRequires t as b
-       )
-    => t as b
-    -> TestableFn
+  TestableFn ::
+    ( QC.Arbitrary (Specification b)
+    , Typeable (FunTy as b)
+    , AppRequires t as b
+    ) =>
+    t as b ->
+    TestableFn
 
 instance Show TestableFn where
   show (TestableFn (fn :: t as b)) =
     show fn ++ " :: " ++ show (typeOf (undefined :: FunTy as b))
 
 -- | Check that `mapSpec` is correct
-prop_mapSpec
-  :: ( HasSpec a
-     , AppRequires t '[a] b
-     )
-  => t '[a] b
-  -> Specification a
-  -> QC.Property
+prop_mapSpec ::
+  ( HasSpec a
+  , AppRequires t '[a] b
+  ) =>
+  t '[a] b ->
+  Specification a ->
+  QC.Property
 prop_mapSpec funsym spec =
   QC.forAll (strictGen $ genFromSpecT spec) $ \ma -> fromGEDiscard $ do
     a <- ma
     pure $ conformsToSpec (semantics funsym a) (mapSpec funsym spec)
 
 -- | Check that propagation is correct via `genInverse`
-prop_propagateSpecSound
-  :: ( HasSpec a
-     , AppRequires t '[a] b
-     )
-  => t '[a] b
-  -> b
-  -> QC.Property
+prop_propagateSpecSound ::
+  ( HasSpec a
+  , AppRequires t '[a] b
+  ) =>
+  t '[a] b ->
+  b ->
+  QC.Property
 prop_propagateSpecSound funsym b =
   QC.forAll (strictGen $ genInverse (Fun funsym) TrueSpec b) $ \ma -> fromGEDiscard $ do
     a <- ma
@@ -244,8 +244,8 @@ instance
   , Ord k
   , HasSpec k
   , Foldy v
-  )
-  => Arbitrary (MapSpec k v)
+  ) =>
+  Arbitrary (MapSpec k v)
   where
   arbitrary =
     MapSpec
@@ -337,8 +337,8 @@ instance
   , Arbitrary (FoldSpec a)
   , Arbitrary (TypeSpec a)
   , HasSpec a
-  )
-  => Arbitrary (ListSpec a)
+  ) =>
+  Arbitrary (ListSpec a)
   where
   arbitrary = ListSpec <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
   shrink (ListSpec a b c d e) = [ListSpec a' b' c' d' e' | (a', b', c', d', e') <- shrink (a, b, c, d, e)]
@@ -362,10 +362,10 @@ instance Arbitrary (FoldSpec (Set a)) where
 ------------------------------------------------------------------------
 
 data TestableCtx as where
-  TestableCtx
-    :: HasSpec a
-    => ListCtx Value as (HOLE a)
-    -> TestableCtx as
+  TestableCtx ::
+    HasSpec a =>
+    ListCtx Value as (HOLE a) ->
+    TestableCtx as
 
 instance forall as. (All HasSpec as, TypeList as) => QC.Arbitrary (TestableCtx as) where
   arbitrary = do

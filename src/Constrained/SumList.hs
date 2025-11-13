@@ -98,10 +98,10 @@ class HasSpec a => Complete a where
 -- ===================================================================
 
 -- | Try to find an upper-bound for the values admitted by a `Specification`
-knownUpperBound
-  :: (TypeSpec a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a)
-  => Specification a
-  -> Maybe a
+knownUpperBound ::
+  (TypeSpec a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) =>
+  Specification a ->
+  Maybe a
 knownUpperBound (ExplainSpec _ s) = knownUpperBound s
 knownUpperBound TrueSpec = upperBound
 knownUpperBound (MemberSpec as) = Just $ maximum as
@@ -116,10 +116,10 @@ knownUpperBound (TypeSpec (NumSpecInterval lo hi) cant) = upper (lo <|> lowerBou
       | otherwise = listToMaybe $ [b, b - 1 .. a] \\ cant
 
 -- | Try to find a lower-bound for the values admitted by a `Specification`
-knownLowerBound
-  :: (TypeSpec a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a)
-  => Specification a
-  -> Maybe a
+knownLowerBound ::
+  (TypeSpec a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) =>
+  Specification a ->
+  Maybe a
 knownLowerBound (ExplainSpec _ s) = knownLowerBound s
 knownLowerBound TrueSpec = lowerBound
 knownLowerBound (MemberSpec as) = Just $ minimum as
@@ -134,8 +134,8 @@ knownLowerBound (TypeSpec (NumSpecInterval lo hi) cant) =
       | a == b = a <$ guard (a `notElem` cant)
       | otherwise = listToMaybe $ [a, a + 1 .. b] \\ cant
 
-isEmptyNumSpec
-  :: (TypeSpec a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) => Specification a -> Bool
+isEmptyNumSpec ::
+  (TypeSpec a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) => Specification a -> Bool
 isEmptyNumSpec = \case
   ExplainSpec _ s -> isEmptyNumSpec s
   ErrorSpec {} -> True
@@ -161,18 +161,18 @@ enumerateInterval (NumSpecInterval lo hi) =
 
 -- | Generate a list of values subject to a constraint on both the elements and
 -- the result
-genNumList
-  :: forall a m
-   . ( MonadGenError m
-     , Arbitrary a
-     , Integral a
-     , Numeric a
-     , Random a
-     , Complete a
-     )
-  => Specification a
-  -> Specification a
-  -> GenT m [a]
+genNumList ::
+  forall a m.
+  ( MonadGenError m
+  , Arbitrary a
+  , Integral a
+  , Numeric a
+  , Random a
+  , Complete a
+  ) =>
+  Specification a ->
+  Specification a ->
+  GenT m [a]
 genNumList elemSIn foldSIn = do
   let extraElemConstraints
         | Just l <- knownLowerBound elemSIn
@@ -224,8 +224,8 @@ genNumList elemSIn foldSIn = do
         (maybe es (flip Set.insert es) me)
         spec
 
-    gen
-      :: forall m'. MonadGenError m' => (Specification a, Specification a) -> Int -> [a] -> GenT m' [a]
+    gen ::
+      forall m'. MonadGenError m' => (Specification a, Specification a) -> Int -> [a] -> GenT m' [a]
     gen (elemS, foldS) fuel lst
       | fuel <= 0
       , not $ 0 `conformsToSpec` foldS =
@@ -265,17 +265,17 @@ genNumList elemSIn foldSIn = do
                 . snd
           gen specs' (fuel - 1) (x : lst)
 
-narrowFoldSpecs
-  :: forall a
-   . ( TypeSpec a ~ NumSpec a
-     , Arbitrary a
-     , Integral a
-     , Random a
-     , MaybeBounded a
-     , Complete a
-     )
-  => (Specification a, Specification a)
-  -> (Specification a, Specification a)
+narrowFoldSpecs ::
+  forall a.
+  ( TypeSpec a ~ NumSpec a
+  , Arbitrary a
+  , Integral a
+  , Random a
+  , MaybeBounded a
+  , Complete a
+  ) =>
+  (Specification a, Specification a) ->
+  (Specification a, Specification a)
 narrowFoldSpecs specs = maybe specs narrowFoldSpecs (go specs)
   where
     -- Note: make sure there is some progress when returning Just or this will loop forever
@@ -335,21 +335,21 @@ narrowFoldSpecs specs = maybe specs narrowFoldSpecs (go specs)
       _ -> Nothing
 
 -- | Try to narrow down a specification for the elems and fold of a list
-narrowByFuelAndSize
-  :: forall a
-   . ( TypeSpec a ~ NumSpec a
-     , Arbitrary a
-     , Integral a
-     , Random a
-     , MaybeBounded a
-     , Complete a
-     )
-  => a
-  -- ^ Fuel
-  -> Int
-  -- ^ Integer
-  -> (Specification a, Specification a)
-  -> (Specification a, Specification a)
+narrowByFuelAndSize ::
+  forall a.
+  ( TypeSpec a ~ NumSpec a
+  , Arbitrary a
+  , Integral a
+  , Random a
+  , MaybeBounded a
+  , Complete a
+  ) =>
+  -- | Fuel
+  a ->
+  -- | Integer
+  Int ->
+  (Specification a, Specification a) ->
+  (Specification a, Specification a)
 narrowByFuelAndSize fuel size specpair =
   loop (100 :: Int) (onlyOnceTransformations $ (narrowFoldSpecs specpair))
   where
@@ -465,20 +465,20 @@ narrowByFuelAndSize fuel size specpair =
 
 -- | Generate a list with 'sizeSpec' elements, that add up to a total that conforms
 --   to 'foldSpec'. Every element in the list should conform to 'elemSpec'
-genListWithSize
-  :: forall a m
-   . ( Complete a
-     , MonadGenError m
-     , Random a
-     , Integral a
-     , Arbitrary a
-     , Numeric a
-     , Complete Integer
-     )
-  => Specification Integer
-  -> Specification a
-  -> Specification a
-  -> GenT m [a]
+genListWithSize ::
+  forall a m.
+  ( Complete a
+  , MonadGenError m
+  , Random a
+  , Integral a
+  , Arbitrary a
+  , Numeric a
+  , Complete Integer
+  ) =>
+  Specification Integer ->
+  Specification a ->
+  Specification a ->
+  GenT m [a]
 genListWithSize sizeSpec elemSpec foldSpec
   | TrueSpec <- sizeSpec = genNumList elemSpec foldSpec
   | ErrorSpec _ <- sizeSpec <> geqSpec 0 =
@@ -518,13 +518,13 @@ genListWithSize sizeSpec elemSpec foldSpec
           GT -> pickPositive elemSpec total count
           LT -> pickNegative elemSpec total count
 
-pickPositive
-  :: forall t m
-   . (Integral t, Random t, MonadGenError m, TypeSpec t ~ NumSpec t, Complete t)
-  => Specification t
-  -> t
-  -> Integer
-  -> GenT m [t]
+pickPositive ::
+  forall t m.
+  (Integral t, Random t, MonadGenError m, TypeSpec t ~ NumSpec t, Complete t) =>
+  Specification t ->
+  t ->
+  Integer ->
+  GenT m [t]
 pickPositive elemspec total count = do
   sol <-
     pureGen $
@@ -539,13 +539,13 @@ pickPositive elemspec total count = do
     No msgs -> fatalErrorNE (NE.fromList msgs)
     Yes (x :| _) -> pure x
 
-pickNegative
-  :: forall t m
-   . (Integral t, Complete t, Random t, MonadGenError m, TypeSpec t ~ NumSpec t)
-  => Specification t
-  -> t
-  -> Integer
-  -> GenT m [t]
+pickNegative ::
+  forall t m.
+  (Integral t, Complete t, Random t, MonadGenError m, TypeSpec t ~ NumSpec t) =>
+  Specification t ->
+  t ->
+  Integer ->
+  GenT m [t]
 
 -- | total can be either negative, or 0. If it is 0, we want `count` numbers that add to `zero`
 pickNegative elemspec total count = do
@@ -575,12 +575,12 @@ predSpecPair spec = (specName spec, (`conformsToSpec` spec))
 
 -- | The smallest number admitted by the spec, if we can find one.
 --   if not return the defaultValue 'dv'
-minFromSpec
-  :: forall n
-   . (Ord n, Complete n, TypeSpec n ~ NumSpec n)
-  => n
-  -> Specification n
-  -> n
+minFromSpec ::
+  forall n.
+  (Ord n, Complete n, TypeSpec n ~ NumSpec n) =>
+  n ->
+  Specification n ->
+  n
 minFromSpec dv (ExplainSpec _ spec) = minFromSpec @n dv spec
 minFromSpec dv TrueSpec = dv
 minFromSpec dv s@(SuspendedSpec _ _) =
@@ -593,12 +593,12 @@ minFromSpec dv (TypeSpec (NumSpecInterval lo _) _) = maybe dv id lo
 
 -- | The largest number admitted by the spec, if we can find one.
 --   if not return the defaultValue 'dv'
-maxFromSpec
-  :: forall n
-   . (Ord n, Complete n, TypeSpec n ~ NumSpec n)
-  => n
-  -> Specification n
-  -> n
+maxFromSpec ::
+  forall n.
+  (Ord n, Complete n, TypeSpec n ~ NumSpec n) =>
+  n ->
+  Specification n ->
+  n
 maxFromSpec dv (ExplainSpec _ spec) = maxFromSpec @n dv spec
 maxFromSpec dv TrueSpec = dv
 maxFromSpec dv s@(SuspendedSpec _ _) =
@@ -624,9 +624,9 @@ instance Show t => Show (Solution t) where
 -- | Special case Int for keeping track of "fuel" to find solutions
 newtype Cost = Cost Int deriving (Eq, Show, Num, Ord)
 
-firstYesG
-  :: Monad m
-  => Solution t -> (x -> Cost -> m (Cost, Solution t)) -> [x] -> Cost -> m (Cost, Solution t)
+firstYesG ::
+  Monad m =>
+  Solution t -> (x -> Cost -> m (Cost, Solution t)) -> [x] -> Cost -> m (Cost, Solution t)
 firstYesG nullSolution f xs c = go xs c
   where
     go [] cost = pure (cost, nullSolution)
@@ -699,16 +699,16 @@ splitsOf count = [(i, j) | i <- [1 .. div count 2], let j = count - i]
 --  Note that count of 1 and 2, are base cases.
 --  When 'count' is greater than 1, we need to sample from [smallest..total],
 --  so 'smallest' better be less that or equal to 'total'
-pickAll
-  :: forall t
-   . (Show t, Integral t, Random t)
-  => t
-  -> t
-  -> (String, t -> Bool)
-  -> t
-  -> Int
-  -> Cost
-  -> Gen (Cost, Solution t)
+pickAll ::
+  forall t.
+  (Show t, Integral t, Random t) =>
+  t ->
+  t ->
+  (String, t -> Bool) ->
+  t ->
+  Int ->
+  Cost ->
+  Gen (Cost, Solution t)
 pickAll smallest largest (pName, _) total count cost
   | cost > 1000 =
       pure $
@@ -796,17 +796,17 @@ pickAll smallest largest (pName, p) total count cost = do
 
 -- {-# SPECIALIZE pickAll::Int -> (String, Int -> Bool) -> Int -> Int -> Cost -> Gen (Cost, Solution Int) #-}
 
-doSplit
-  :: (Random t, Show t, Integral t)
-  => t
-  -> t
-  -> (String, t -> Bool)
-  -> t
-  -> [(t, t)]
+doSplit ::
+  (Random t, Show t, Integral t) =>
+  t ->
+  t ->
+  (String, t -> Bool) ->
+  t ->
+  [(t, t)] ->
   -- (t -> (String, t -> Bool) -> t -> Int -> Cost -> Gen (Cost, Solution t)) ->
-  -> (Int, Int)
-  -> Cost
-  -> Gen (Cost, Solution t)
+  (Int, Int) ->
+  Cost ->
+  Gen (Cost, Solution t)
 doSplit smallest largest (pName, p) total sample (i, j) c = go sample c
   where
     -- The 'sample' is a list of pairs (x,y), where we know (x+y) == total.

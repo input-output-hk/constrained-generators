@@ -114,42 +114,42 @@ import Prelude hiding (pred)
 
 -- | Attach an explanation (a list of lines) to a `Pred` to get a better
 -- error-message when things go wrong
-assertExplain
-  :: IsPred p
-  => [String]
-  -> p
-  -> Pred
+assertExplain ::
+  IsPred p =>
+  [String] ->
+  p ->
+  Pred
 assertExplain [] p = toPred p
 assertExplain (s : es) p = Explain (s :| es) (toPred p)
 
 -- | Assert something, most commonly a @`Term` `Bool`@
-assert
-  :: IsPred p
-  => p
-  -> Pred
+assert ::
+  IsPred p =>
+  p ->
+  Pred
 assert p = toPred p
 
 -- | Quantify over all the elements of a collection
-forAll
-  :: forall p t a
-   . ( Forallable t a
-     , HasSpec t
-     , HasSpec a
-     , IsPred p
-     )
-  => Term t
-  -> (Term a -> p)
-  -> Pred
+forAll ::
+  forall p t a.
+  ( Forallable t a
+  , HasSpec t
+  , HasSpec a
+  , IsPred p
+  ) =>
+  Term t ->
+  (Term a -> p) ->
+  Pred
 forAll tm = mkForAll tm . bind
 
-mkForAll
-  :: ( Forallable t a
-     , HasSpec t
-     , HasSpec a
-     )
-  => Term t
-  -> Binder a
-  -> Pred
+mkForAll ::
+  ( Forallable t a
+  , HasSpec t
+  , HasSpec a
+  ) =>
+  Term t ->
+  Binder a ->
+  Pred
 mkForAll (Lit (forAllToList -> [])) _ = TruePred
 mkForAll _ (_ :-> TruePred) = TruePred
 mkForAll tm binder = ForAll tm binder
@@ -157,21 +157,21 @@ mkForAll tm binder = ForAll tm binder
 -- | Existentially quanitfy a value, the first argument is a recovery-function
 -- to recover the value from a semantics for all the outer-bound variables during
 -- constraint-checking
-exists
-  :: forall a p
-   . (HasSpec a, IsPred p)
-  => ((forall b. Term b -> b) -> GE a)
-  -> (Term a -> p)
-  -> Pred
+exists ::
+  forall a p.
+  (HasSpec a, IsPred p) =>
+  ((forall b. Term b -> b) -> GE a) ->
+  (Term a -> p) ->
+  Pred
 exists sem k =
   Exists sem $ bind k
 
 -- | Existentially quantify a variable without the ability to check the constraint
-unsafeExists
-  :: forall a p
-   . (HasSpec a, IsPred p)
-  => (Term a -> p)
-  -> Pred
+unsafeExists ::
+  forall a p.
+  (HasSpec a, IsPred p) =>
+  (Term a -> p) ->
+  Pred
 unsafeExists = exists (\_ -> fatalError "unsafeExists")
 
 -- | Create a fresh variable to be able to talk about the same `Term` mutliple times
@@ -183,27 +183,27 @@ unsafeExists = exists (\_ -> fatalError "unsafeExists")
 -- > assert $ fst_ p <=. snd_ p
 -- Although you'd most likely prefer to use `match` in practise:
 -- > match p $ \ x y -> assert $ x <=. y
-letBind
-  :: ( HasSpec a
-     , IsPred p
-     )
-  => Term a
-  -> (Term a -> p)
-  -> Pred
+letBind ::
+  ( HasSpec a
+  , IsPred p
+  ) =>
+  Term a ->
+  (Term a -> p) ->
+  Pred
 letBind tm@V {} body = toPred (body tm)
 letBind tm body = Let tm (bind body)
 
 -- | Bind a @`Term` b@ obtained via a haskell-level function @reification :: a -> b@
 -- from a @`Term` a@, the inner `Term` depends strictly on the outer one
-reify
-  :: ( HasSpec a
-     , HasSpec b
-     , IsPred p
-     )
-  => Term a
-  -> (a -> b)
-  -> (Term b -> p)
-  -> Pred
+reify ::
+  ( HasSpec a
+  , HasSpec b
+  , IsPred p
+  ) =>
+  Term a ->
+  (a -> b) ->
+  (Term b -> p) ->
+  Pred
 reify t f body =
   exists (\eval -> pure $ f (eval t)) $ \(name "reify_variable" -> x) ->
     [ reifies x t f
@@ -211,16 +211,16 @@ reify t f body =
     ]
 
 -- | Like `reify` but provide a @[`var`| ... |]@-style name explicitly
-reifyWithName
-  :: ( HasSpec a
-     , HasSpec b
-     , IsPred p
-     )
-  => String
-  -> Term a
-  -> (a -> b)
-  -> (Term b -> p)
-  -> Pred
+reifyWithName ::
+  ( HasSpec a
+  , HasSpec b
+  , IsPred p
+  ) =>
+  String ->
+  Term a ->
+  (a -> b) ->
+  (Term b -> p) ->
+  Pred
 reifyWithName nam t f body =
   exists (\eval -> pure $ f (eval t)) $ \(name nam -> x) ->
     [ reifies x t f
@@ -713,8 +713,8 @@ isLit :: Term a -> Bool
 isLit = isJust . fromLit
 
 -- | Build a `caseOn`
-mkCase
-  :: HasSpec (SumOver as) => Term (SumOver as) -> List (Weighted Binder) as -> Pred
+mkCase ::
+  HasSpec (SumOver as) => Term (SumOver as) -> List (Weighted Binder) as -> Pred
 mkCase tm cs
   | Weighted _ (x :-> p) :> Nil <- cs = Subst x tm p
   -- TODO: all equal maybe?
@@ -730,11 +730,11 @@ mkCase tm cs
     isFalseBinder _ = Semigroup.All False
 
 -- | Run a `caseOn`
-runCaseOn
-  :: SumOver as
-  -> List Binder as
-  -> (forall a. (Typeable a, Show a) => Var a -> a -> Pred -> r)
-  -> r
+runCaseOn ::
+  SumOver as ->
+  List Binder as ->
+  (forall a. (Typeable a, Show a) => Var a -> a -> Pred -> r) ->
+  r
 runCaseOn _ Nil _ = error "The impossible happened in runCaseOn"
 runCaseOn a ((x :-> ps) :> Nil) f = f x a ps
 runCaseOn s ((x :-> ps) :> bs@(_ :> _)) f = case s of
@@ -834,8 +834,8 @@ applyNameHints spec = spec
 type DependGraph = Graph.Graph Name
 
 -- | Everything to the left depends on everything from the right, except themselves
-irreflexiveDependencyOn
-  :: forall t t'. (HasVariables t, HasVariables t') => t -> t' -> DependGraph
+irreflexiveDependencyOn ::
+  forall t t'. (HasVariables t, HasVariables t') => t -> t' -> DependGraph
 irreflexiveDependencyOn (freeVarSet -> xs) (freeVarSet -> ys) = Graph.irreflexiveDependencyOn xs ys
 
 -- | These variables are free

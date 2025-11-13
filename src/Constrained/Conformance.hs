@@ -41,11 +41,11 @@ import Test.QuickCheck (Property, Testable, property)
 --   Does the Pred evaluate to True under the given Env?
 --   If it doesn't, an involved explanation appears in the (Just message)
 --   If it does, then it returns Nothing
-checkPredsE
-  :: NE.NonEmpty String
-  -> Env
-  -> [Pred]
-  -> Maybe (NE.NonEmpty String)
+checkPredsE ::
+  NE.NonEmpty String ->
+  Env ->
+  [Pred] ->
+  Maybe (NE.NonEmpty String)
 checkPredsE msgs env ps =
   case catMaybes (fmap (checkPredE env msgs) ps) of
     [] -> Nothing
@@ -131,13 +131,13 @@ checkPredE env msgs = \case
 
 -- | @conformsToSpec@ with explanation. Nothing if (conformsToSpec a spec),
 --   but (Just explanations) if not(conformsToSpec a spec).
-conformsToSpecE
-  :: forall a
-   . HasSpec a
-  => a
-  -> Specification a
-  -> NE.NonEmpty String
-  -> Maybe (NE.NonEmpty String)
+conformsToSpecE ::
+  forall a.
+  HasSpec a =>
+  a ->
+  Specification a ->
+  NE.NonEmpty String ->
+  Maybe (NE.NonEmpty String)
 conformsToSpecE a (ExplainSpec [] s) msgs = conformsToSpecE a s msgs
 conformsToSpecE a (ExplainSpec (x : xs) s) msgs = conformsToSpecE a s ((x :| xs) <> msgs)
 conformsToSpecE _ TrueSpec _ = Nothing
@@ -239,8 +239,8 @@ monitorSpec (SuspendedSpec x p) a =
   errorGE (monitorPred (Env.singleton x a) p) . property
 monitorSpec _ _ = property
 
-monitorPred
-  :: forall m. MonadGenError m => Env -> Pred -> m (Property -> Property)
+monitorPred ::
+  forall m. MonadGenError m => Env -> Pred -> m (Property -> Property)
 monitorPred env = \case
   ElemPred {} -> pure id -- Not sure about this, but ElemPred is a lot like Assert, so ...
   Monitor m -> pure (m $ errorGE . explain "monitorPred: Monitor" . runTerm env)

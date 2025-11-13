@@ -148,9 +148,9 @@ instance Logic TreeW where
   mapTypeSpec RootLabelW (TreeSpec _ _ rs _) = rs
 
 -- | Get the label of the root of the `Tree`
-rootLabel_
-  :: forall a
-   . HasSpec a
-  => Term (Tree a)
-  -> Term a
+rootLabel_ ::
+  forall a.
+  HasSpec a =>
+  Term (Tree a) ->
+  Term a
 rootLabel_ = appTerm RootLabelW

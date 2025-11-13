@@ -297,15 +297,15 @@ listOfT gen = do
 
 -- | Generate a list of elements of length at most @goalLen@, but accepting
 -- failure to get that many elements so long as @validLen@ is true.
-listOfUntilLenT
-  :: (Typeable a, MonadGenError m)
-  => GenT GE a
-  -- ^ Element generator
-  -> Int
-  -- ^ @goalLen@ goal length
-  -> (Int -> Bool)
-  -- ^ @validLen@ filter
-  -> GenT m [a]
+listOfUntilLenT ::
+  (Typeable a, MonadGenError m) =>
+  -- | Element generator
+  GenT GE a ->
+  -- | @goalLen@ goal length
+  Int ->
+  -- | @validLen@ filter
+  (Int -> Bool) ->
+  GenT m [a]
 listOfUntilLenT gen goalLen validLen =
   genList `suchThatT` validLen . length
   where
@@ -333,8 +333,8 @@ suchThatT g p = suchThatWithTryT 100 g p
 -- `Strict` mode @suchThatWithTry tries@ will try @tries@ times and fail with a
 -- `fatalError` if unsuccessful.  In `Loose` mode however, we will try only
 -- once and generate a `genError`.
-suchThatWithTryT
-  :: forall a m. (Typeable a, MonadGenError m) => Int -> GenT m a -> (a -> Bool) -> GenT m a
+suchThatWithTryT ::
+  forall a m. (Typeable a, MonadGenError m) => Int -> GenT m a -> (a -> Bool) -> GenT m a
 suchThatWithTryT tries g p = do
   mode <- getMode
   let (n, cont) = case mode of
@@ -425,12 +425,12 @@ catchGen g = genFromGenT (catchGenT g)
 
 -- | Return the first successfull result from a list of computations, if they all fail
 --   return a list of the error messages from each one.
-firstGenT
-  :: forall m a. MonadGenError m => [GenT GE a] -> GenT m (Either [(NonEmpty (NonEmpty String))] a)
+firstGenT ::
+  forall m a. MonadGenError m => [GenT GE a] -> GenT m (Either [(NonEmpty (NonEmpty String))] a)
 firstGenT gs = loop gs []
   where
-    loop
-      :: [GenT GE a] -> [NonEmpty (NonEmpty String)] -> GenT m (Either [NonEmpty (NonEmpty String)] a)
+    loop ::
+      [GenT GE a] -> [NonEmpty (NonEmpty String)] -> GenT m (Either [NonEmpty (NonEmpty String)] a)
     loop [] ys = pure (Left (reverse ys))
     loop (x : xs) ys = do
       this <- catchGenT x

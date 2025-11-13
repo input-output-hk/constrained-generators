@@ -211,10 +211,10 @@ length_ = sizeOf_
 infixr 2 ||.
 
 -- | Another name for `or_`
-(||.)
-  :: Term Bool
-  -> Term Bool
-  -> Term Bool
+(||.) ::
+  Term Bool ->
+  Term Bool ->
+  Term Bool
 (||.) = or_
 
 infixr 5 ++.

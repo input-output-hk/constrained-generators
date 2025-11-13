@@ -109,8 +109,8 @@ instance HasSpec a => Show (ListSpec a) where
   showsPrec d = shows . prettyPrec d
 
 instance
-  HasSpec a
-  => Pretty (WithPrec (ListSpec a))
+  HasSpec a =>
+  Pretty (WithPrec (ListSpec a))
   where
   pretty (WithPrec d s) =
     parensIf (d > 10) $
@@ -190,14 +190,14 @@ elem_ = appTerm ElemW
 
 -- | Pattern for extracting the v`ElemW` symbol, useful for writing custom
 -- rewrite rules for functions that deal with lists
-pattern Elem
-  :: forall b
-   . ()
-  => forall a
-   . (b ~ Bool, Eq a, HasSpec a)
-  => Term a
-  -> Term [a]
-  -> Term b
+pattern Elem ::
+  forall b.
+  () =>
+  forall a.
+  (b ~ Bool, Eq a, HasSpec a) =>
+  Term a ->
+  Term [a] ->
+  Term b
 pattern Elem x y <-
   ( App
       (getWitness -> Just ElemW)
@@ -377,10 +377,10 @@ deriving instance (Eq (ListW d r))
 ------------------------------------------------------------------------
 
 -- | Sum over a `Foldy` list
-sum_
-  :: Foldy a
-  => Term [a]
-  -> Term a
+sum_ ::
+  Foldy a =>
+  Term [a] ->
+  Term a
 sum_ = foldMap_ id
 
 -- | Like @[a]@
@@ -454,15 +454,15 @@ toPredsFoldSpec x (FoldSpec funAB sspec) =
 -- | Specification for how a thing sums together, used to represent `foldMap_`-related constraints
 data FoldSpec a where
   NoFold :: FoldSpec a
-  FoldSpec
-    :: forall b a
-     . ( HasSpec a
-       , HasSpec b
-       , Foldy b
-       )
-    => Fun '[a] b
-    -> Specification b
-    -> FoldSpec a
+  FoldSpec ::
+    forall b a.
+    ( HasSpec a
+    , HasSpec b
+    , Foldy b
+    ) =>
+    Fun '[a] b ->
+    Specification b ->
+    FoldSpec a
 
 -- | Take a `FoldSpec` and turn it into a `FoldSpec` for a function applied
 -- before the original spec
@@ -493,11 +493,11 @@ conformsToFoldSpec xs (FoldSpec (Fun f) s) = adds (map (semantics f) xs) `confor
 -- | Talk about how to add together values and generate lists of values that
 -- conform to `FoldSpec`s
 class (HasSpec a, NumLike a) => Foldy a where
-  genList
-    :: MonadGenError m => Specification a -> Specification a -> GenT m [a]
-  default genList
-    :: (MonadGenError m, GenericallyInstantiated a, Foldy (SimpleRep a))
-    => Specification a -> Specification a -> GenT m [a]
+  genList ::
+    MonadGenError m => Specification a -> Specification a -> GenT m [a]
+  default genList ::
+    (MonadGenError m, GenericallyInstantiated a, Foldy (SimpleRep a)) =>
+    Specification a -> Specification a -> GenT m [a]
   genList s s' = map fromSimpleRep <$> genList (toSimpleRepSpec s) (toSimpleRepSpec s')
 
   theAddFn :: IntW '[a, a] a
@@ -506,18 +506,18 @@ class (HasSpec a, NumLike a) => Foldy a where
   theZero :: a
   theZero = 0
 
-  genSizedList
-    :: MonadGenError m
-    => Specification Integer
-    -> Specification a
-    -> Specification a
-    -> GenT m [a]
-  default genSizedList
-    :: (MonadGenError m, GenericallyInstantiated a, Foldy (SimpleRep a))
-    => Specification Integer
-    -> Specification a
-    -> Specification a
-    -> GenT m [a]
+  genSizedList ::
+    MonadGenError m =>
+    Specification Integer ->
+    Specification a ->
+    Specification a ->
+    GenT m [a]
+  default genSizedList ::
+    (MonadGenError m, GenericallyInstantiated a, Foldy (SimpleRep a)) =>
+    Specification Integer ->
+    Specification a ->
+    Specification a ->
+    GenT m [a]
   genSizedList sz elemSpec foldSpec =
     map fromSimpleRep
       <$> genSizedList sz (toSimpleRepSpec elemSpec) (toSimpleRepSpec foldSpec)
@@ -582,18 +582,18 @@ instance Foldy Word64 where
   genList = genNumList
   genSizedList = genListWithSize
 
-genFromFold
-  :: forall m a b
-   . ( MonadGenError m
-     , Foldy b
-     , HasSpec a
-     )
-  => [a]
-  -> Specification Integer
-  -> Specification a
-  -> Fun '[a] b
-  -> Specification b
-  -> GenT m [a]
+genFromFold ::
+  forall m a b.
+  ( MonadGenError m
+  , Foldy b
+  , HasSpec a
+  ) =>
+  [a] ->
+  Specification Integer ->
+  Specification a ->
+  Fun '[a] b ->
+  Specification b ->
+  GenT m [a]
 genFromFold must (simplifySpec -> size) elemS fun@(Fun fn) foldS
   | isErrorLike size =
       fatalErrorNE (NE.cons "genFromFold has ErrorLike sizeSpec" (errorLikeMessage size))

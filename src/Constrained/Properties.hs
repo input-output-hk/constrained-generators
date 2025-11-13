@@ -27,8 +27,8 @@ forAllSpec :: (HasSpec a, QC.Testable p) => Specification a -> (a -> p) -> QC.Pr
 forAllSpec spec prop = forAllSpecShow spec show prop
 
 -- | Like `forAllSpec` with a custom way of printing values
-forAllSpecShow
-  :: (HasSpec a, QC.Testable p) => Specification a -> (a -> String) -> (a -> p) -> QC.Property
+forAllSpecShow ::
+  (HasSpec a, QC.Testable p) => Specification a -> (a -> String) -> (a -> p) -> QC.Property
 forAllSpecShow spec pp prop =
   let sspec = simplifySpec spec
    in QC.forAllShrinkShow (genFromSpec sspec) (shrinkWithSpec sspec) pp $ \a ->

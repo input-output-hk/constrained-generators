@@ -241,12 +241,12 @@ ex19 :: Specification (Maybe Bool)
 ex19 = constrained $ \mb -> onCon @"Just" mb (\x -> x ==. lit False)
 
 data Dimensions where
-  Dimensions
-    :: { length :: Int
-       , width :: Int
-       , depth :: Int
-       }
-    -> Dimensions
+  Dimensions ::
+    { length :: Int
+    , width :: Int
+    , depth :: Int
+    } ->
+    Dimensions
   deriving (Ord, Eq, Show, Generic)
 
 instance HasSimpleRep Dimensions

@@ -56,12 +56,12 @@ import Test.QuickCheck (shrinkList, shuffle)
 -- | `TypeSpec` for `Set`
 data SetSpec a
   = SetSpec
+      -- | Required elements
       (Set a)
-      -- ^ Required elements
+      -- | Specification for elements
       (Specification a)
-      -- ^ Specification for elements
+      -- | Specification for size
       (Specification Integer)
-      -- ^ Specification for size
 
 instance Ord a => Sized (Set.Set a) where
   sizeOf = toInteger . Set.size

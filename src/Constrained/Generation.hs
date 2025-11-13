@@ -98,8 +98,8 @@ import Prelude hiding (cycle, pred)
 -- | Generate a value that satisfies the spec. This function can fail if the
 -- spec is inconsistent, there is a dependency error, or if the underlying
 -- generators are not flexible enough.
-genFromSpecT
-  :: forall a m. (HasCallStack, HasSpec a, MonadGenError m) => Specification a -> GenT m a
+genFromSpecT ::
+  forall a m. (HasCallStack, HasSpec a, MonadGenError m) => Specification a -> GenT m a
 genFromSpecT (simplifySpec -> spec) = case spec of
   ExplainSpec [] s -> genFromSpecT s
   ExplainSpec es s -> push es (genFromSpecT s)
@@ -141,8 +141,8 @@ genFromSpec spec = do
   either (error . ('\n' :) . catMessages) pure res
 
 -- | A version of `genFromSpecT` that takes a seed and a size and gives you a result
-genFromSpecWithSeed
-  :: forall a. (HasCallStack, HasSpec a) => Int -> Int -> Specification a -> a
+genFromSpecWithSeed ::
+  forall a. (HasCallStack, HasSpec a) => Int -> Int -> Specification a -> a
 genFromSpecWithSeed seed size spec = unGen (genFromSpec spec) (mkQCGen seed) size
 
 -- ----------------------- Shrinking -------------------------------
@@ -322,12 +322,12 @@ flattenPred pIn = go (freeVarNames pIn) [pIn]
       Explain es pp -> map (explanation es) (go fvs [pp]) ++ go fvs ps
       _ -> p : go fvs ps
 
-    goBinder
-      :: Set Int
-      -> Binder a
-      -> [Pred]
-      -> (HasSpec a => Var a -> [Pred] -> [Pred])
-      -> [Pred]
+    goBinder ::
+      Set Int ->
+      Binder a ->
+      [Pred] ->
+      (HasSpec a => Var a -> [Pred] -> [Pred]) ->
+      [Pred]
     goBinder fvs (x :-> p) ps k = k x' $ go (Set.insert (nameOf x') fvs) (p' : ps)
       where
         (x', p') = freshen x p fvs
@@ -336,8 +336,8 @@ flattenPred pIn = go (freeVarNames pIn) [pIn]
 -- We want to fail if A and B are independent.
 -- Consider: A + B = A + C, A <- B
 -- Here we want to consider this constraint defining for A
-linearize
-  :: MonadGenError m => [Pred] -> DependGraph -> m [SolverStage]
+linearize ::
+  MonadGenError m => [Pred] -> DependGraph -> m [SolverStage]
 linearize preds graph = do
   sorted <- case topsort graph of
     Left cycle ->
@@ -630,13 +630,13 @@ letFloating = fold . go []
     goBlock' fvs ctx (And ps : ps') = goBlock' fvs ctx (ps ++ ps')
     goBlock' fvs ctx (p : ps) = goBlock' fvs (p : ctx) ps
 
-    goExists
-      :: HasSpec a
-      => [Pred]
-      -> (Binder a -> Pred)
-      -> Var a
-      -> Pred
-      -> [Pred]
+    goExists ::
+      HasSpec a =>
+      [Pred] ->
+      (Binder a -> Pred) ->
+      Var a ->
+      Pred ->
+      [Pred]
     goExists ctx ex x (Let t (y :-> p))
       | not $ Name x `appearsIn` t =
           let (y', p') = freshen y p (Set.insert (nameOf x) $ freeVarNames p <> freeVarNames t)
@@ -649,11 +649,11 @@ letFloating = fold . go []
       Exists (explainSemantics k) (x :-> pushExplain es p)
       where
         -- TODO: Unfortunately this is necessary on ghc 8.10.7
-        explainSemantics
-          :: forall a
-           . ((forall b. Term b -> b) -> GE a)
-          -> (forall b. Term b -> b)
-          -> GE a
+        explainSemantics ::
+          forall a.
+          ((forall b. Term b -> b) -> GE a) ->
+          (forall b. Term b -> b) ->
+          GE a
         explainSemantics k2 env = explainNE es $ k2 env
     -- TODO: possibly one wants to have a `Term` level explanation in case
     -- the `b` propagates to ErrorSpec for some reason?
@@ -746,8 +746,8 @@ letSubexpressionElimination = go []
 
 -- | Precondition: the `Pred` defines the `Var a`
 -- Runs in `GE` in order for us to have detailed context on failure.
-computeSpecSimplified
-  :: forall a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Specification a)
+computeSpecSimplified ::
+  forall a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Specification a)
 computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
   ElemPred True t xs -> propagateSpec (MemberSpec xs) <$> toCtx x t
   ElemPred False (t :: Term b) xs -> propagateSpec (TypeSpec @b (emptySpec @b) (NE.toList xs)) <$> toCtx x t
@@ -816,8 +816,8 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
 
 -- | Precondition: the `Pred fn` defines the `Var a`.
 --   Runs in `GE` in order for us to have detailed context on failure.
-computeSpec
-  :: forall a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Specification a)
+computeSpec ::
+  forall a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Specification a)
 computeSpec x p = computeSpecSimplified x (simplifyPred p)
 
 computeSpecBinderSimplified :: Binder a -> GE (Specification a)
@@ -825,12 +825,12 @@ computeSpecBinderSimplified (x :-> p) = computeSpecSimplified x p
 
 -- | Turn a list of branches into a SumSpec. If all the branches fail return an ErrorSpec.
 --   Note the requirement of HasSpec(SumOver).
-caseSpec
-  :: forall as
-   . HasSpec (SumOver as)
-  => Maybe String
-  -> List (Weighted (Specification)) as
-  -> Specification (SumOver as)
+caseSpec ::
+  forall as.
+  HasSpec (SumOver as) =>
+  Maybe String ->
+  List (Weighted (Specification)) as ->
+  Specification (SumOver as)
 caseSpec tString ss
   | allBranchesFail ss =
       ErrorSpec
@@ -848,12 +848,12 @@ caseSpec tString ss
     allBranchesFail (Weighted _ s :> Nil) = isErrorLike s
     allBranchesFail (Weighted _ s :> ss2@(_ :> _)) = isErrorLike s && allBranchesFail ss2
 
-    loop
-      :: forall as3
-       . HasSpec (SumOver as3)
-      => Maybe String
-      -> List (Weighted Specification) as3
-      -> Specification (SumOver as3)
+    loop ::
+      forall as3.
+      HasSpec (SumOver as3) =>
+      Maybe String ->
+      List (Weighted Specification) as3 ->
+      Specification (SumOver as3)
     loop _ Nil = error "The impossible happened in caseSpec"
     loop _ (s :> Nil) = thing s
     loop mTypeString (s :> ss1@(_ :> _))
@@ -878,8 +878,8 @@ data SumSpec a b
       (Specification b)
 
 -- | The "normal" view of t`SumSpec` that doesn't take weights into account
-pattern SumSpec
-  :: (Maybe (Int, Int)) -> (Specification a) -> (Specification b) -> SumSpec a b
+pattern SumSpec ::
+  (Maybe (Int, Int)) -> (Specification a) -> (Specification b) -> SumSpec a b
 pattern SumSpec a b c <- SumSpecRaw _ a b c
   where
     SumSpec a b c = SumSpecRaw Nothing a b c
@@ -1037,14 +1037,14 @@ infix 4 ==.
 (==.) = appTerm EqualW
 
 -- | Pattern version of `(==.)` for rewrite rules
-pattern Equal
-  :: forall b
-   . ()
-  => forall a
-   . (b ~ Bool, Eq a, HasSpec a)
-  => Term a
-  -> Term a
-  -> Term b
+pattern Equal ::
+  forall b.
+  () =>
+  forall a.
+  (b ~ Bool, Eq a, HasSpec a) =>
+  Term a ->
+  Term a ->
+  Term b
 pattern Equal x y <-
   ( App
       (getWitness -> Just EqualW)
@@ -1102,12 +1102,12 @@ saturatePred p =
 -- HasSpec for Sums
 -- ==================================================================
 
-guardSumSpec
-  :: forall a b
-   . (HasSpec a, HasSpec b, KnownNat (CountCases b))
-  => [String]
-  -> SumSpec a b
-  -> Specification (Sum a b)
+guardSumSpec ::
+  forall a b.
+  (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
+  [String] ->
+  SumSpec a b ->
+  Specification (Sum a b)
 guardSumSpec msgs s@(SumSpecRaw tString _ sa sb)
   | isErrorLike sa
   , isErrorLike sb =
@@ -1268,27 +1268,27 @@ injRight_ :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term b -> Term (
 injRight_ = appTerm InjRightW
 
 -- | Pattern for building custom rewrite rules
-pattern InjRight
-  :: forall c
-   . ()
-  => forall a b
-   . ( c ~ Sum a b
-     , AppRequires SumW '[b] c
-     )
-  => Term b
-  -> Term c
+pattern InjRight ::
+  forall c.
+  () =>
+  forall a b.
+  ( c ~ Sum a b
+  , AppRequires SumW '[b] c
+  ) =>
+  Term b ->
+  Term c
 pattern InjRight x <- (App (getWitness -> Just InjRightW) (x :> Nil))
 
 -- | Pattern for building custom rewrite rules
-pattern InjLeft
-  :: forall c
-   . ()
-  => forall a b
-   . ( c ~ Sum a b
-     , AppRequires SumW '[a] c
-     )
-  => Term a
-  -> Term c
+pattern InjLeft ::
+  forall c.
+  () =>
+  forall a b.
+  ( c ~ Sum a b
+  , AppRequires SumW '[a] c
+  ) =>
+  Term a ->
+  Term c
 pattern InjLeft x <- App (getWitness -> Just InjLeftW) (x :> Nil)
 
 sumWeightL, sumWeightR :: Maybe (Int, Int) -> Doc a
@@ -1362,14 +1362,14 @@ not_ = appTerm NotW
 -- Syntax for Solving : stages and plans
 
 data SolverStage where
-  SolverStage
-    :: HasSpec a
-    => { stageVar :: Var a
-       , stagePreds :: [Pred]
-       , stageSpec :: Specification a
-       , relevantVariables :: Set Name
-       }
-    -> SolverStage
+  SolverStage ::
+    HasSpec a =>
+    { stageVar :: Var a
+    , stagePreds :: [Pred]
+    , stageSpec :: Specification a
+    , relevantVariables :: Set Name
+    } ->
+    SolverStage
 
 docVar :: Typeable a => Var a -> Doc h
 docVar (v :: Var a) = fromString (show v ++ " :: " ++ showType @a)
@@ -1410,12 +1410,12 @@ fromGESpec ge = case ge of
 --   Eg. ProdFstW, InjRightW, SingletonW, etc. NOT the lifted versions like fst_ singleton_,
 --   which construct Terms. We had to wait until here to define this because it
 --   depends on Semigroup property of Specification, and Asserting equality
-mapSpec
-  :: forall t a b
-   . AppRequires t '[a] b
-  => t '[a] b
-  -> Specification a
-  -> Specification b
+mapSpec ::
+  forall t a b.
+  AppRequires t '[a] b =>
+  t '[a] b ->
+  Specification a ->
+  Specification b
 mapSpec f (ExplainSpec es s) = explainSpec es (mapSpec f s)
 mapSpec f TrueSpec = mapTypeSpec f (emptySpec @a)
 mapSpec _ (ErrorSpec err) = ErrorSpec err

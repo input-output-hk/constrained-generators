@@ -57,11 +57,11 @@ import Test.QuickCheck
 
 -- | First-order terms, application, literals, variables. $depsExplanation
 data TermD deps a where
-  App
-    :: AppRequiresD deps t dom rng
-    => t dom rng
-    -> List (TermD deps) dom
-    -> TermD deps rng
+  App ::
+    AppRequiresD deps t dom rng =>
+    t dom rng ->
+    List (TermD deps) dom ->
+    TermD deps rng
   Lit :: (Typeable a, Eq a, Show a) => a -> TermD deps a
   V :: (HasSpecD deps a, Typeable a) => Var a -> TermD deps a
 
@@ -135,12 +135,12 @@ class Syntax (t :: [Type] -> Type -> Type) where
   isInfix :: t dom rng -> Bool
   isInfix _ = False
 
-  prettySymbol
-    :: forall deps dom rng ann
-     . t dom rng
-    -> List (TermD deps) dom
-    -> Int
-    -> Maybe (Doc ann)
+  prettySymbol ::
+    forall deps dom rng ann.
+    t dom rng ->
+    List (TermD deps) dom ->
+    Int ->
+    Maybe (Doc ann)
   prettySymbol _ _ _ = Nothing
 
 instance Show a => Pretty (WithPrec (TermD deps a)) where
@@ -171,103 +171,103 @@ instance Show a => Show (TermD deps a) where
 -- when generating from constraints (mostly to do with choosing the order in
 -- which to generate things). $depsExplanation
 data PredD deps where
-  ElemPred
-    :: (HasSpecD deps a, Show a)
-    => Bool
-    -> TermD deps a
-    -> NonEmpty a
-    -> PredD deps
+  ElemPred ::
+    (HasSpecD deps a, Show a) =>
+    Bool ->
+    TermD deps a ->
+    NonEmpty a ->
+    PredD deps
   Monitor :: ((forall a. TermD deps a -> a) -> Property -> Property) -> PredD deps
   And :: [PredD deps] -> PredD deps
-  Exists
-    :: ((forall b. TermD deps b -> b) -> GE a)
-    -- ^ Constructive recovery function for checking
+  Exists ::
+    -- | Constructive recovery function for checking
     --         existential quantification
-    -> BinderD deps a
-    -> PredD deps
+    ((forall b. TermD deps b -> b) -> GE a) ->
+    BinderD deps a ->
+    PredD deps
   -- This is here because we sometimes need to delay substitution until we're done building
   -- terms and predicates. This is because our surface syntax relies on names being "a bit"
   -- lazily bound to avoid infinite loops when trying to create new names.
-  Subst
-    :: ( HasSpecD deps a
-       , Show a
-       )
-    => Var a
-    -> TermD deps a
-    -> PredD deps
-    -> PredD deps
-  Let
-    :: TermD deps a
-    -> BinderD deps a
-    -> PredD deps
+  Subst ::
+    ( HasSpecD deps a
+    , Show a
+    ) =>
+    Var a ->
+    TermD deps a ->
+    PredD deps ->
+    PredD deps
+  Let ::
+    TermD deps a ->
+    BinderD deps a ->
+    PredD deps
   Assert :: TermD deps Bool -> PredD deps
-  Reifies
-    :: ( HasSpecD deps a
-       , HasSpecD deps b
-       , Show a
-       , Show b
-       )
-    => TermD deps b
-    -- ^ This depends on the @a@ term
-    -> TermD deps a
-    -> (a -> b)
-    -- ^ Recover a useable @b@ value from the @a@ term in normal Haskell land
-    -> PredD deps
-  DependsOn
-    :: ( HasSpecD deps a
-       , HasSpecD deps b
-       , Show a
-       , Show b
-       )
-    => TermD deps a
-    -> TermD deps b
-    -> PredD deps
-  ForAll
-    :: ( ForallableD deps t e
-       , HasSpecD deps t
-       , HasSpecD deps e
-       , Show t
-       , Show e
-       )
-    => TermD deps t
-    -> BinderD deps e
-    -> PredD deps
-  Case
-    :: ( HasSpecD deps (SumOver as)
-       , Show (SumOver as)
-       )
-    => TermD deps (SumOver as)
-    -> List (Weighted (BinderD deps)) as
-    -- ^ Each branch of the type is bound with
+  Reifies ::
+    ( HasSpecD deps a
+    , HasSpecD deps b
+    , Show a
+    , Show b
+    ) =>
+    -- | This depends on the @a@ term
+    TermD deps b ->
+    TermD deps a ->
+    -- | Recover a useable @b@ value from the @a@ term in normal Haskell land
+    (a -> b) ->
+    PredD deps
+  DependsOn ::
+    ( HasSpecD deps a
+    , HasSpecD deps b
+    , Show a
+    , Show b
+    ) =>
+    TermD deps a ->
+    TermD deps b ->
+    PredD deps
+  ForAll ::
+    ( ForallableD deps t e
+    , HasSpecD deps t
+    , HasSpecD deps e
+    , Show t
+    , Show e
+    ) =>
+    TermD deps t ->
+    BinderD deps e ->
+    PredD deps
+  Case ::
+    ( HasSpecD deps (SumOver as)
+    , Show (SumOver as)
+    ) =>
+    TermD deps (SumOver as) ->
+    -- | Each branch of the type is bound with
     --         only one variable because `as` are types.
     --         Constructors with multiple arguments are
     --         encoded with `ProdOver` (c.f. `Constrained.Univ`).
-    -> PredD deps
+    List (Weighted (BinderD deps)) as ->
+    PredD deps
   -- monadic-style `when` - if the first argument is False the second
   -- doesn't apply.
-  When
-    :: TermD deps Bool
-    -> PredD deps
-    -> PredD deps
-  GenHintD
-    :: ( HasGenHintD deps a
-       , Show a
-       , Show (HintD deps a)
-       )
-    => HintD deps a
-    -> TermD deps a
-    -> PredD deps
+  When ::
+    TermD deps Bool ->
+    PredD deps ->
+    PredD deps
+  GenHintD ::
+    ( HasGenHintD deps a
+    , Show a
+    , Show (HintD deps a)
+    ) =>
+    HintD deps a ->
+    TermD deps a ->
+    PredD deps
   TruePred :: PredD deps
   FalsePred :: NE.NonEmpty String -> PredD deps
   Explain :: NE.NonEmpty String -> PredD deps -> PredD deps
 
 -- | Binders, a t`Var` is bound in a `PredD`, never anywhere else
 data BinderD deps a where
-  (:->)
-    :: (HasSpecD deps a, Show a)
-    => Var a
-    -> PredD deps
-    -> BinderD deps a
+  (:->) ::
+    (HasSpecD deps a, Show a) =>
+    Var a ->
+    PredD deps ->
+    BinderD deps a
 
 deriving instance Show (BinderD deps a)
 
@@ -344,31 +344,31 @@ data SpecificationD deps a where
   -- | Explain a Specification
   ExplainSpec :: [String] -> SpecificationD deps a -> SpecificationD deps a
   -- | Elements of a known set
-  MemberSpec
-    :: NE.NonEmpty a
-    -- ^ It must be an element of this list. Try hard not to put duplicates in the List.
-    -> SpecificationD deps a
+  MemberSpec ::
+    -- | It must be an element of this list. Try hard not to put duplicates in the List.
+    NE.NonEmpty a ->
+    SpecificationD deps a
   -- | The empty set
-  ErrorSpec
-    :: NE.NonEmpty String
-    -> SpecificationD deps a
+  ErrorSpec ::
+    NE.NonEmpty String ->
+    SpecificationD deps a
   -- | The set described by some predicates
   --     over the bound variable.
-  SuspendedSpec
-    :: HasSpecD deps a
-    => Var a
-    -- ^ This variable ranges over values denoted by
+  SuspendedSpec ::
+    HasSpecD deps a =>
+    -- | This variable ranges over values denoted by
     --         the spec
-    -> PredD deps
-    -- ^ And the variable is subject to these constraints
-    -> SpecificationD deps a
+    Var a ->
+    -- | And the variable is subject to these constraints
+    PredD deps ->
+    SpecificationD deps a
   -- | A type-specific spec
-  TypeSpecD
-    :: HasSpecD deps a
-    => TypeSpecD deps a
-    -> [a]
-    -- ^ It can't be any of the elements of this set
-    -> SpecificationD deps a
+  TypeSpecD ::
+    HasSpecD deps a =>
+    TypeSpecD deps a ->
+    -- | It can't be any of the elements of this set
+    [a] ->
+    SpecificationD deps a
   -- | Anything
   TrueSpec :: SpecificationD deps a
 

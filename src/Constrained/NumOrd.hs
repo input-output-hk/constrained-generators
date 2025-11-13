@@ -112,39 +112,39 @@ instance Syntax OrdW where
 -- `OrdW` that make sense for a given type we are comparing things on.
 class (Ord a, HasSpec a) => OrdLike a where
   leqSpec :: a -> Specification a
-  default leqSpec
-    :: ( GenericRequires a
-       , OrdLike (SimpleRep a)
-       )
-    => a
-    -> Specification a
+  default leqSpec ::
+    ( GenericRequires a
+    , OrdLike (SimpleRep a)
+    ) =>
+    a ->
+    Specification a
   leqSpec = fromSimpleRepSpec . leqSpec . toSimpleRep
 
   ltSpec :: a -> Specification a
-  default ltSpec
-    :: ( OrdLike (SimpleRep a)
-       , GenericRequires a
-       )
-    => a
-    -> Specification a
+  default ltSpec ::
+    ( OrdLike (SimpleRep a)
+    , GenericRequires a
+    ) =>
+    a ->
+    Specification a
   ltSpec = fromSimpleRepSpec . ltSpec . toSimpleRep
 
   geqSpec :: a -> Specification a
-  default geqSpec
-    :: ( OrdLike (SimpleRep a)
-       , GenericRequires a
-       )
-    => a
-    -> Specification a
+  default geqSpec ::
+    ( OrdLike (SimpleRep a)
+    , GenericRequires a
+    ) =>
+    a ->
+    Specification a
   geqSpec = fromSimpleRepSpec . geqSpec . toSimpleRep
 
   gtSpec :: a -> Specification a
-  default gtSpec
-    :: ( OrdLike (SimpleRep a)
-       , GenericRequires a
-       )
-    => a
-    -> Specification a
+  default gtSpec ::
+    ( OrdLike (SimpleRep a)
+    , GenericRequires a
+    ) =>
+    a ->
+    Specification a
   gtSpec = fromSimpleRepSpec . gtSpec . toSimpleRep
 
 -- | This instance should be general enough for every type of Number that has a NumSpec as its TypeSpec
@@ -288,29 +288,29 @@ instance Random (Ratio Integer) where
 emptyNumSpec :: Ord a => NumSpec a
 emptyNumSpec = mempty
 
-guardNumSpec
-  :: (Ord n, HasSpec n, TypeSpec n ~ NumSpec n)
-  => [String]
-  -> NumSpec n
-  -> Specification n
+guardNumSpec ::
+  (Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =>
+  [String] ->
+  NumSpec n ->
+  Specification n
 guardNumSpec msg s@(NumSpecInterval (Just a) (Just b))
   | a > b = ErrorSpec ("NumSpec has low bound greater than hi bound" :| (("   " ++ show s) : msg))
   | a == b = equalSpec a
 guardNumSpec _ s = typeSpec s
 
 -- | Conjunction
-combineNumSpec
-  :: (HasSpec n, Ord n, TypeSpec n ~ NumSpec n)
-  => NumSpec n
-  -> NumSpec n
-  -> Specification n
+combineNumSpec ::
+  (HasSpec n, Ord n, TypeSpec n ~ NumSpec n) =>
+  NumSpec n ->
+  NumSpec n ->
+  Specification n
 combineNumSpec s s' = guardNumSpec ["when combining two NumSpecs", "   " ++ show s, "   " ++ show s'] (s <> s')
 
 -- | Generate a value that satisfies the spec
-genFromNumSpec
-  :: (MonadGenError m, Show n, Random n, Ord n, Num n, MaybeBounded n)
-  => NumSpec n
-  -> GenT m n
+genFromNumSpec ::
+  (MonadGenError m, Show n, Random n, Ord n, Num n, MaybeBounded n) =>
+  NumSpec n ->
+  GenT m n
 genFromNumSpec (NumSpecInterval ml mu) = do
   n <- sizeT
   pureGen . choose =<< constrainInterval (ml <|> lowerBound) (mu <|> upperBound) (fromIntegral n)
@@ -326,8 +326,8 @@ shrinkWithNumSpec _ = shrink
 fixupWithNumSpec :: Arbitrary n => NumSpec n -> n -> Maybe n
 fixupWithNumSpec _ = listToMaybe . shrink
 
-constrainInterval
-  :: (MonadGenError m, Ord a, Num a, Show a) => Maybe a -> Maybe a -> Integer -> m (a, a)
+constrainInterval ::
+  (MonadGenError m, Ord a, Num a, Show a) => Maybe a -> Maybe a -> Integer -> m (a, a)
 constrainInterval ml mu r =
   case (ml, mu) of
     (Nothing, Nothing) -> pure (-r', r')
@@ -421,16 +421,16 @@ finiteSize = toInteger (maxBound @n) - toInteger (minBound @n) + 1
 --      (TypeSpec [0..9]  [0,1,3,4,5,6,8,9]) = filter  {0,1,2,3,4,5,6,7,8,9} (`notElem` [0,1,3,4,5,6,8,9]) = [2,7]
 --      So (MemberSpec [2,7]) is better than  (TypeSpec [0..9]  [0,1,3,4,5,6,8,9]). This works no matter what
 --      the count of interval is. We only need the (length badlist > (N/2)).
-notInNumSpec
-  :: forall n
-   . ( HasSpec n
-     , TypeSpec n ~ NumSpec n
-     , Bounded n
-     , Integral n
-     )
-  => NumSpec n
-  -> [n]
-  -> Specification n
+notInNumSpec ::
+  forall n.
+  ( HasSpec n
+  , TypeSpec n ~ NumSpec n
+  , Bounded n
+  , Integral n
+  ) =>
+  NumSpec n ->
+  [n] ->
+  Specification n
 notInNumSpec ns@(NumSpecInterval a b) bad
   | toInteger (length bad) > (finiteSize @n `div` 2) || countSpec ns < toInteger (length bad) =
       nubOrdMemberSpec
@@ -543,25 +543,25 @@ multT PosInf (Ok _) = PosInf
 type Number n = (Num n, Enum n, TypeSpec n ~ NumSpec n, Num (NumSpec n), HasSpec n, Ord n)
 
 -- | Addition on `Specification` for `Number`
-addSpecInt
-  :: Number n
-  => Specification n
-  -> Specification n
-  -> Specification n
+addSpecInt ::
+  Number n =>
+  Specification n ->
+  Specification n ->
+  Specification n
 addSpecInt x y = operateSpec " + " (+) (+) x y
 
-subSpecInt
-  :: Number n
-  => Specification n
-  -> Specification n
-  -> Specification n
+subSpecInt ::
+  Number n =>
+  Specification n ->
+  Specification n ->
+  Specification n
 subSpecInt x y = operateSpec " - " (-) (-) x y
 
-multSpecInt
-  :: Number n
-  => Specification n
-  -> Specification n
-  -> Specification n
+multSpecInt ::
+  Number n =>
+  Specification n ->
+  Specification n ->
+  Specification n
 multSpecInt x y = operateSpec " * " (*) (*) x y
 
 -- | let 'n' be some numeric type, and 'f' and 'ft' be operations on 'n' and (TypeSpec n)
@@ -569,14 +569,14 @@ multSpecInt x y = operateSpec " * " (*) (*) x y
 --   Normally 'f' will be a (Num n) instance method (+,-,*) on n,
 --   and 'ft' will be a a (Num (TypeSpec n)) instance method (+,-,*) on (TypeSpec n)
 --   But this will work for any operations 'f' and 'ft' with the right types
-operateSpec
-  :: Number n
-  => String
-  -> (n -> n -> n)
-  -> (TypeSpec n -> TypeSpec n -> TypeSpec n)
-  -> Specification n
-  -> Specification n
-  -> Specification n
+operateSpec ::
+  Number n =>
+  String ->
+  (n -> n -> n) ->
+  (TypeSpec n -> TypeSpec n -> TypeSpec n) ->
+  Specification n ->
+  Specification n ->
+  Specification n
 operateSpec operator f ft (ExplainSpec es x) y = explainSpec es $ operateSpec operator f ft x y
 operateSpec operator f ft x (ExplainSpec es y) = explainSpec es $ operateSpec operator f ft x y
 operateSpec operator f ft x y = case (x, y) of
@@ -630,8 +630,8 @@ instance Number Integer => Num (Specification Integer) where
 --   'genFromTypeSpec' might return. For lots of types, there is no way to be very accurate.
 --   Here we lift the HasSpec methods 'cardinalTrueSpec' and 'cardinalTypeSpec'
 --   from (TypeSpec Integer) to (Specification Integer)
-cardinality
-  :: forall a. (Number Integer, HasSpec a) => Specification a -> Specification Integer
+cardinality ::
+  forall a. (Number Integer, HasSpec a) => Specification a -> Specification Integer
 cardinality (ExplainSpec es s) = explainSpec es (cardinality s)
 cardinality TrueSpec = cardinalTrueSpec @a
 cardinality (MemberSpec es) = equalSpec (toInteger $ length (nub (NE.toList es)))
@@ -645,8 +645,8 @@ cardinality SuspendedSpec {} = cardinalTrueSpec @a
 -- | A generic function to use as an instance for the HasSpec method
 --   cardinalTypeSpec :: HasSpec a => TypeSpec a -> Specification Integer
 --   for types 'n' such that (TypeSpec n ~ NumSpec n)
-cardinalNumSpec
-  :: forall n. (Integral n, MaybeBounded n, HasSpec n) => NumSpec n -> Specification Integer
+cardinalNumSpec ::
+  forall n. (Integral n, MaybeBounded n, HasSpec n) => NumSpec n -> Specification Integer
 cardinalNumSpec (NumSpecInterval (Just lo) (Just hi)) =
   if hi >= lo
     then equalSpec (toInteger hi - toInteger lo + 1)
@@ -667,30 +667,30 @@ cardinalNumSpec (NumSpecInterval Nothing Nothing) = cardinalTrueSpec @n
 -- | Everything we need to make the number operations make sense on a given type
 class (Num a, HasSpec a, HasDivision a, OrdLike a) => NumLike a where
   subtractSpec :: a -> TypeSpec a -> Specification a
-  default subtractSpec
-    :: ( NumLike (SimpleRep a)
-       , GenericRequires a
-       )
-    => a
-    -> TypeSpec a
-    -> Specification a
+  default subtractSpec ::
+    ( NumLike (SimpleRep a)
+    , GenericRequires a
+    ) =>
+    a ->
+    TypeSpec a ->
+    Specification a
   subtractSpec a ts = fromSimpleRepSpec $ subtractSpec (toSimpleRep a) ts
 
   negateSpec :: TypeSpec a -> Specification a
-  default negateSpec
-    :: ( NumLike (SimpleRep a)
-       , GenericRequires a
-       )
-    => TypeSpec a
-    -> Specification a
+  default negateSpec ::
+    ( NumLike (SimpleRep a)
+    , GenericRequires a
+    ) =>
+    TypeSpec a ->
+    Specification a
   negateSpec = fromSimpleRepSpec . negateSpec @(SimpleRep a)
 
   safeSubtract :: a -> a -> Maybe a
-  default safeSubtract
-    :: (HasSimpleRep a, NumLike (SimpleRep a))
-    => a
-    -> a
-    -> Maybe a
+  default safeSubtract ::
+    (HasSimpleRep a, NumLike (SimpleRep a)) =>
+    a ->
+    a ->
+    Maybe a
   safeSubtract a b = fromSimpleRep <$> safeSubtract @(SimpleRep a) (toSimpleRep a) (toSimpleRep b)
 
 -- | Operations on numbers.
@@ -730,23 +730,23 @@ instance Syntax IntW where
 
 class HasDivision a where
   doDivide :: a -> a -> a
-  default doDivide
-    :: ( HasDivision (SimpleRep a)
-       , GenericRequires a
-       )
-    => a
-    -> a
-    -> a
+  default doDivide ::
+    ( HasDivision (SimpleRep a)
+    , GenericRequires a
+    ) =>
+    a ->
+    a ->
+    a
   doDivide a b = fromSimpleRep $ doDivide (toSimpleRep a) (toSimpleRep b)
 
   divideSpec :: a -> TypeSpec a -> Specification a
-  default divideSpec
-    :: ( HasDivision (SimpleRep a)
-       , GenericRequires a
-       )
-    => a
-    -> TypeSpec a
-    -> Specification a
+  default divideSpec ::
+    ( HasDivision (SimpleRep a)
+    , GenericRequires a
+    ) =>
+    a ->
+    TypeSpec a ->
+    Specification a
   divideSpec a ts = fromSimpleRepSpec $ divideSpec (toSimpleRep a) ts
 
 instance {-# OVERLAPPABLE #-} (HasSpec a, MaybeBounded a, Integral a, TypeSpec a ~ NumSpec a) => HasDivision a where
@@ -1011,11 +1011,11 @@ infixr 4 >.
 
 -- | t`TypeSpec`-level `satisfies` to implement `toPreds` in
 -- `HasSpec` instance
-toPredsNumSpec
-  :: OrdLike n
-  => Term n
-  -> NumSpec n
-  -> Pred
+toPredsNumSpec ::
+  OrdLike n =>
+  Term n ->
+  NumSpec n ->
+  Pred
 toPredsNumSpec v (NumSpecInterval ml mu) =
   fold $
     [Assert $ Lit l <=. v | l <- maybeToList ml]
@@ -1055,8 +1055,8 @@ instance Logic OrdW where
 -- of predicates, e.g.:
 -- > propagate LessW (Value l :! Unary HOLE) spec =
 -- >   caseBoolSpec spec $ \case True -> gtSpec l; False -> leqSpec l
-caseBoolSpec
-  :: HasSpec a => Specification Bool -> (Bool -> Specification a) -> Specification a
+caseBoolSpec ::
+  HasSpec a => Specification Bool -> (Bool -> Specification a) -> Specification a
 caseBoolSpec spec cont = case possibleValues spec of
   [] -> ErrorSpec (NE.fromList ["No possible values in caseBoolSpec"])
   [b] -> cont b

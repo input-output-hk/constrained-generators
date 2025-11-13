@@ -10,12 +10,12 @@ import Test.QuickCheck hiding (forAll)
 -- ===============================================
 -- Three Strategies that work
 
-mapMemberA
-  :: (Ord k, IsNormalType k, IsNormalType v, HasSpec k, HasSpec v)
-  => Map k v
-  -> Term k
-  -> Term v
-  -> Pred
+mapMemberA ::
+  (Ord k, IsNormalType k, IsNormalType v, HasSpec k, HasSpec v) =>
+  Map k v ->
+  Term k ->
+  Term v ->
+  Pred
 mapMemberA m key val =
   And
     [ assert $ member_ key (dom_ (lit m))
@@ -27,24 +27,24 @@ mapMemberA m key val =
         (branch $ \x -> assert $ val ==. x)
     ]
 
-mapMemberB
-  :: (Ord k, IsNormalType v, HasSpec k, HasSpec v, IsNormalType v, IsNormalType k)
-  => Map k v
-  -> Term k
-  -> Term v
-  -> Pred
+mapMemberB ::
+  (Ord k, IsNormalType v, HasSpec k, HasSpec v, IsNormalType v, IsNormalType k) =>
+  Map k v ->
+  Term k ->
+  Term v ->
+  Pred
 mapMemberB m key val =
   And
     [ assert $ member_ key (dom_ (lit m))
     , assert $ just_ val ==. lookup_ key (lit m)
     ]
 
-mapMemberC
-  :: (Ord k, HasSpec k, HasSpec v, IsNormalType v, IsNormalType v, IsNormalType k)
-  => Map k v
-  -> Term k
-  -> Term v
-  -> Pred
+mapMemberC ::
+  (Ord k, HasSpec k, HasSpec v, IsNormalType v, IsNormalType v, IsNormalType k) =>
+  Map k v ->
+  Term k ->
+  Term v ->
+  Pred
 mapMemberC m key val =
   And
     [ assert $ member_ key (dom_ (lit m))
@@ -54,12 +54,12 @@ mapMemberC m key val =
 -- ===============================================
 -- Two Strategies that don't work
 
-mapMemberBad1
-  :: (Ord k, HasSpec k, HasSpec v, IsNormalType v, IsNormalType k)
-  => Term [(k, v)]
-  -> Term k
-  -> Term v
-  -> Pred
+mapMemberBad1 ::
+  (Ord k, HasSpec k, HasSpec v, IsNormalType v, IsNormalType k) =>
+  Term [(k, v)] ->
+  Term k ->
+  Term v ->
+  Pred
 mapMemberBad1 m key val =
   And
     [ dependsOn key m
@@ -68,12 +68,12 @@ mapMemberBad1 m key val =
     , assert $ elem_ (pair_ key val) m
     ]
 
-mapMemberBad2
-  :: (Ord k, HasSpec k, HasSpec v, IsNormalType v, IsNormalType k)
-  => Map k v
-  -> Term k
-  -> Term v
-  -> Pred
+mapMemberBad2 ::
+  (Ord k, HasSpec k, HasSpec v, IsNormalType v, IsNormalType k) =>
+  Map k v ->
+  Term k ->
+  Term v ->
+  Pred
 mapMemberBad2 m key val =
   satisfies
     (pair_ key val)

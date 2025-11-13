@@ -15,19 +15,19 @@ import Data.Kind
 import Data.Typeable
 
 -- | Check if two function symbols of different type are the same
-sameFunSym
-  :: forall (t1 :: [Type] -> Type -> Type) d1 r1 (t2 :: [Type] -> Type -> Type) d2 r2
-   . ( Typeable t1
-     , Typeable d1
-     , Typeable r1
-     , Typeable t2
-     , Typeable d2
-     , Typeable r2
-     , Eq (t1 d1 r1)
-     )
-  => t1 d1 r1
-  -> t2 d2 r2
-  -> Maybe (t1 :~: t2, d1 :~: d2, r1 :~: r2)
+sameFunSym ::
+  forall (t1 :: [Type] -> Type -> Type) d1 r1 (t2 :: [Type] -> Type -> Type) d2 r2.
+  ( Typeable t1
+  , Typeable d1
+  , Typeable r1
+  , Typeable t2
+  , Typeable d2
+  , Typeable r2
+  , Eq (t1 d1 r1)
+  ) =>
+  t1 d1 r1 ->
+  t2 d2 r2 ->
+  Maybe (t1 :~: t2, d1 :~: d2, r1 :~: r2)
 sameFunSym x y = do
   Refl <- eqT @t1 @t2
   Refl <- eqT @d1 @d2
@@ -38,14 +38,14 @@ sameFunSym x y = do
 
 -- | Try to cast from an unknown function symbol universe @t@ to a known
 -- universe @t'@
-getWitness
-  :: forall t t' d r
-   . ( Typeable t
-     , Typeable d
-     , Typeable r
-     , Typeable t'
-     )
-  => t d r -> Maybe (t' d r)
+getWitness ::
+  forall t t' d r.
+  ( Typeable t
+  , Typeable d
+  , Typeable r
+  , Typeable t'
+  ) =>
+  t d r -> Maybe (t' d r)
 getWitness = cast
 
 -- | Semantic operations are ones that give the function symbol, meaning as a

@@ -86,8 +86,8 @@ maybeSpec = constrained $ \ms ->
       (branch $ \_ -> False)
       (branch $ \y -> 0 <=. y)
 
-eitherSetSpec
-  :: Specification (Set (Either Int Int), Set (Either Int Int), Set (Either Int Int))
+eitherSetSpec ::
+  Specification (Set (Either Int Int), Set (Either Int Int), Set (Either Int Int))
 eitherSetSpec = constrained' $ \es as bs ->
   [ assert $ es ==. (as <> bs)
   , forAll as $ \a ->

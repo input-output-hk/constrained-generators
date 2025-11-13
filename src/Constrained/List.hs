@@ -109,12 +109,12 @@ mapMList _ Nil = pure Nil
 mapMList f (x :> xs) = (:>) <$> f x <*> mapMList f xs
 
 -- | Monadic (actually applicative) `mapListC`
-mapMListC
-  :: forall c as f g m
-   . (Applicative m, All c as)
-  => (forall a. c a => f a -> m (g a))
-  -> List f as
-  -> m (List g as)
+mapMListC ::
+  forall c as f g m.
+  (Applicative m, All c as) =>
+  (forall a. c a => f a -> m (g a)) ->
+  List f as ->
+  m (List g as)
 mapMListC _ Nil = pure Nil
 mapMListC f (x :> xs) = (:>) <$> f x <*> mapMListC @c f xs
 
@@ -123,8 +123,8 @@ foldMapList :: Monoid b => (forall a. f a -> b) -> List f as -> b
 foldMapList f = fold . toList f
 
 -- | Like `foldMapList` where the mapped function has a constraint
-foldMapListC
-  :: forall c as b f. (All c as, Monoid b) => (forall a. c a => f a -> b) -> List f as -> b
+foldMapListC ::
+  forall c as b f. (All c as, Monoid b) => (forall a. c a => f a -> b) -> List f as -> b
 foldMapListC f = fold . toListC @c f
 
 -- | Append two t`List`s
@@ -209,8 +209,8 @@ pattern NilCtx c = ListCtx Nil c Nil
 {-# COMPLETE NilCtx #-}
 
 -- | A view of a t`ListCtx` where you see the whole context at the same time.
-pattern ListCtx
-  :: () => as'' ~ Append as (a : as') => List f as -> c a -> List f as' -> ListCtx f as'' c
+pattern ListCtx ::
+  () => as'' ~ Append as (a : as') => List f as -> c a -> List f as' -> ListCtx f as'' c
 pattern ListCtx as c as' <- (toWholeCtx -> ListCtxWhole as c as')
   where
     ListCtx as c as' = fromWholeCtx $ ListCtxWhole as c as'
@@ -219,11 +219,11 @@ pattern ListCtx as c as' <- (toWholeCtx -> ListCtxWhole as c as')
 
 -- | Internals for the t`ListCtx` pattern
 data ListCtxWhole f as c where
-  ListCtxWhole
-    :: List f as
-    -> c a
-    -> List f as'
-    -> ListCtxWhole f (Append as (a : as')) c
+  ListCtxWhole ::
+    List f as ->
+    c a ->
+    List f as' ->
+    ListCtxWhole f (Append as (a : as')) c
 
 toWholeCtx :: ListCtx f as c -> ListCtxWhole f as c
 toWholeCtx (hole :? suf) = ListCtxWhole Nil hole suf
@@ -244,7 +244,7 @@ mapListCtx :: (forall a. f a -> g a) -> ListCtx f as c -> ListCtx g as c
 mapListCtx nt (ListCtx pre c post) = ListCtx (mapList nt pre) c (mapList nt post)
 
 -- | Like `mapListCtx` but the natural transformation may have a constraint
-mapListCtxC
-  :: forall c as f g h. All c as => (forall a. c a => f a -> g a) -> ListCtx f as h -> ListCtx g as h
+mapListCtxC ::
+  forall c as f g h. All c as => (forall a. c a => f a -> g a) -> ListCtx f as h -> ListCtx g as h
 mapListCtxC nt (h :? as) = h :? mapListC @c nt as
 mapListCtxC nt (a :! ctx) = nt a :! mapListCtxC @c nt ctx

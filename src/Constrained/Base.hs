@@ -205,29 +205,29 @@ pattern GenHint h t = GenHintD (HintF h) t
 class (Typeable t, Semantics t, Syntax t) => Logic t where
   {-# MINIMAL propagate | (propagateTypeSpec, propagateMemberSpec) #-}
 
-  propagateTypeSpec
-    :: (AppRequires t as b, HasSpec a)
-    => t as b
-    -> ListCtx Value as (HOLE a)
-    -> TypeSpec b
-    -> [b]
-    -> Specification a
+  propagateTypeSpec ::
+    (AppRequires t as b, HasSpec a) =>
+    t as b ->
+    ListCtx Value as (HOLE a) ->
+    TypeSpec b ->
+    [b] ->
+    Specification a
   propagateTypeSpec f ctx ts cant = propagate f ctx (TypeSpec ts cant)
 
-  propagateMemberSpec
-    :: (AppRequires t as b, HasSpec a)
-    => t as b
-    -> ListCtx Value as (HOLE a)
-    -> NonEmpty b
-    -> Specification a
+  propagateMemberSpec ::
+    (AppRequires t as b, HasSpec a) =>
+    t as b ->
+    ListCtx Value as (HOLE a) ->
+    NonEmpty b ->
+    Specification a
   propagateMemberSpec f ctx xs = propagate f ctx (MemberSpec xs)
 
-  propagate
-    :: (AppRequires t as b, HasSpec a)
-    => t as b
-    -> ListCtx Value as (HOLE a)
-    -> Specification b
-    -> Specification a
+  propagate ::
+    (AppRequires t as b, HasSpec a) =>
+    t as b ->
+    ListCtx Value as (HOLE a) ->
+    Specification b ->
+    Specification a
   propagate f ctx (ExplainSpec es s) = explainSpec es (propagate f ctx s)
   propagate _ _ TrueSpec = TrueSpec
   propagate _ _ (ErrorSpec es) = ErrorSpec es
@@ -235,20 +235,20 @@ class (Typeable t, Semantics t, Syntax t) => Logic t where
   propagate f ctx (TypeSpec ts cant) = propagateTypeSpec f ctx ts cant
   propagate f ctx (MemberSpec xs) = propagateMemberSpec f ctx xs
 
-  rewriteRules
-    :: (TypeList dom, Typeable dom, HasSpec rng, All HasSpec dom)
-    => t dom rng
-    -> List Term dom
-    -> Evidence (AppRequires t dom rng)
-    -> Maybe (Term rng)
+  rewriteRules ::
+    (TypeList dom, Typeable dom, HasSpec rng, All HasSpec dom) =>
+    t dom rng ->
+    List Term dom ->
+    Evidence (AppRequires t dom rng) ->
+    Maybe (Term rng)
   rewriteRules _ _ _ = Nothing
 
-  mapTypeSpec
-    :: forall a b
-     . (HasSpec a, HasSpec b)
-    => t '[a] b
-    -> TypeSpec a
-    -> Specification b
+  mapTypeSpec ::
+    forall a b.
+    (HasSpec a, HasSpec b) =>
+    t '[a] b ->
+    TypeSpec a ->
+    Specification b
   mapTypeSpec _ts _spec = TrueSpec
 
   saturate :: t dom Bool -> List Term dom -> [Pred]
@@ -258,12 +258,12 @@ class (Typeable t, Semantics t, Syntax t) => Logic t where
 -- Note if there is a bunch of functions nested together, like (sizeOf_ (elems_ (snd_ x)))
 -- we propagate each of those nested function symbols over the current spec, one at a time.
 -- The result of this propagation is then made the current spec in the recusive calls to 'propagateSpec'
-propagateSpec
-  :: forall v a
-   . HasSpec v
-  => Specification a
-  -> Ctx v a
-  -> Specification v
+propagateSpec ::
+  forall v a.
+  HasSpec v =>
+  Specification a ->
+  Ctx v a ->
+  Specification v
 propagateSpec spec = \case
   CtxHOLE -> spec
   CtxApp f (ListCtx pre c suf)
@@ -280,24 +280,24 @@ ctxHasSpec CtxApp {} = Evidence
 -- gets given to the `propagateSpecFun` for `f` as  `(f vs HOLE vs')`.
 data Ctx v a where
   -- | A single hole of type `v`. Note ctxHOLE is a nullary constructor, where the `a` type index is the same as the `v` type index.
-  CtxHOLE
-    :: HasSpec v
-    => Ctx v v
+  CtxHOLE ::
+    HasSpec v =>
+    Ctx v v
   -- | The application `f vs Ctx vs'`
-  CtxApp
-    :: ( AppRequires fn as b
-       , HasSpec b
-       , TypeList as
-       , Typeable as
-       , All HasSpec as
-       , Logic fn
-       )
-    => fn as b
+  CtxApp ::
+    ( AppRequires fn as b
+    , HasSpec b
+    , TypeList as
+    , Typeable as
+    , All HasSpec as
+    , Logic fn
+    ) =>
+    fn as b ->
     -- This is basically a `List` where
     -- everything is `Value` except for
     -- one entry which is `Ctx fn v`.
-    -> ListCtx Value as (Ctx v)
-    -> Ctx v b
+    ListCtx Value as (Ctx v) ->
+    Ctx v b
 
 -- | This is used together with `ListCtx` to form
 -- just the arguments to `f vs Ctx vs'` - replacing
@@ -307,16 +307,16 @@ data HOLE a b where
 
 -- | Try to convert a `Term` to a single-hole context - works only if the `Var`
 -- is the _only_ variable in the term _and_ it appears only once in the `Term`.
-toCtx
-  :: forall m v a
-   . ( Typeable v
-     , Show v
-     , MonadGenError m
-     , HasCallStack
-     )
-  => Var v
-  -> Term a
-  -> m (Ctx v a)
+toCtx ::
+  forall m v a.
+  ( Typeable v
+  , Show v
+  , MonadGenError m
+  , HasCallStack
+  ) =>
+  Var v ->
+  Term a ->
+  m (Ctx v a)
 toCtx v = go
   where
     go :: forall b. Term b -> m (Ctx v b)
@@ -338,12 +338,12 @@ toCtx v = go
               ]
 
 -- | `toCtx` lifted to a `List` of `Term`s
-toCtxList
-  :: forall m v as
-   . (Show v, Typeable v, MonadGenError m, HasCallStack)
-  => Var v
-  -> List Term as
-  -> m (ListCtx Value as (Ctx v))
+toCtxList ::
+  forall m v as.
+  (Show v, Typeable v, MonadGenError m, HasCallStack) =>
+  Var v ->
+  List Term as ->
+  m (ListCtx Value as (Ctx v))
 toCtxList v xs = prefix xs
   where
     prefix :: forall as'. HasCallStack => List Term as' -> m (ListCtx Value as' (Ctx v))
@@ -378,9 +378,9 @@ pattern a :>: h = Value a :! NilCtx h
 {-# COMPLETE (:<:), (:>:) #-}
 
 -- | Flip a binary context around
-flipCtx
-  :: (Typeable a, Show a, Typeable b, Show b)
-  => ListCtx Value '[a, b] (HOLE c) -> ListCtx Value '[b, a] (HOLE c)
+flipCtx ::
+  (Typeable a, Show a, Typeable b, Show b) =>
+  ListCtx Value '[a, b] (HOLE c) -> ListCtx Value '[b, a] (HOLE c)
 flipCtx (HOLE :<: x) = x :>: HOLE
 flipCtx (x :>: HOLE) = HOLE :<: x
 
@@ -570,51 +570,51 @@ class
   default emptySpec :: GenericallyInstantiated a => TypeSpec a
   emptySpec = emptySpec @(SimpleRep a)
 
-  default combineSpec
-    :: GenericallyInstantiated a
-    => TypeSpec a
-    -> TypeSpec a
-    -> Specification a
+  default combineSpec ::
+    GenericallyInstantiated a =>
+    TypeSpec a ->
+    TypeSpec a ->
+    Specification a
   combineSpec s s' = fromSimpleRepSpec $ combineSpec @(SimpleRep a) s s'
 
-  default genFromTypeSpec
-    :: (GenericallyInstantiated a, HasCallStack, MonadGenError m)
-    => TypeSpec a
-    -> GenT m a
+  default genFromTypeSpec ::
+    (GenericallyInstantiated a, HasCallStack, MonadGenError m) =>
+    TypeSpec a ->
+    GenT m a
   genFromTypeSpec s = fromSimpleRep <$> genFromTypeSpec s
 
-  default conformsTo
-    :: (GenericallyInstantiated a, HasCallStack)
-    => a
-    -> TypeSpec a
-    -> Bool
+  default conformsTo ::
+    (GenericallyInstantiated a, HasCallStack) =>
+    a ->
+    TypeSpec a ->
+    Bool
   a `conformsTo` s = conformsTo (toSimpleRep a) s
 
-  default toPreds
-    :: GenericallyInstantiated a
-    => Term a
-    -> TypeSpec a
-    -> Pred
+  default toPreds ::
+    GenericallyInstantiated a =>
+    Term a ->
+    TypeSpec a ->
+    Pred
   toPreds v s = toPreds (toGeneric_ v) s
 
-  default shrinkWithTypeSpec
-    :: GenericallyInstantiated a
-    => TypeSpec a
-    -> a
-    -> [a]
+  default shrinkWithTypeSpec ::
+    GenericallyInstantiated a =>
+    TypeSpec a ->
+    a ->
+    [a]
   shrinkWithTypeSpec spec a = map fromSimpleRep $ shrinkWithTypeSpec spec (toSimpleRep a)
 
-  default fixupWithTypeSpec
-    :: GenericallyInstantiated a
-    => TypeSpec a
-    -> a
-    -> Maybe a
+  default fixupWithTypeSpec ::
+    GenericallyInstantiated a =>
+    TypeSpec a ->
+    a ->
+    Maybe a
   fixupWithTypeSpec spec a = fromSimpleRep <$> fixupWithTypeSpec spec (toSimpleRep a)
 
-  default cardinalTypeSpec
-    :: GenericallyInstantiated a
-    => TypeSpec a
-    -> Specification Integer
+  default cardinalTypeSpec ::
+    GenericallyInstantiated a =>
+    TypeSpec a ->
+    Specification Integer
   cardinalTypeSpec = cardinalTypeSpec @(SimpleRep a)
 
 ------------------------------------------------------------------------
@@ -699,19 +699,19 @@ instance Logic BaseW where
   rewriteRules _ _ _ = Nothing
 
 -- | Convert an @a@ to a @`SimpleRep` a@
-toGeneric_
-  :: forall a
-   . GenericRequires a
-  => Term a
-  -> Term (SimpleRep a)
+toGeneric_ ::
+  forall a.
+  GenericRequires a =>
+  Term a ->
+  Term (SimpleRep a)
 toGeneric_ = appTerm ToGenericW
 
 -- | Convert an @`SimpleRep` a@ to an @a@
-fromGeneric_
-  :: forall a
-   . (GenericRequires a, AppRequires BaseW '[SimpleRep a] a)
-  => Term (SimpleRep a)
-  -> Term a
+fromGeneric_ ::
+  forall a.
+  (GenericRequires a, AppRequires BaseW '[SimpleRep a] a) =>
+  Term (SimpleRep a) ->
+  Term a
 fromGeneric_ = appTerm FromGenericW
 
 -- ====================================================================
@@ -721,10 +721,10 @@ fromGeneric_ = appTerm FromGenericW
 -- ====================================================================
 
 -- | Convert a `Specification` for a @`SimpleRep` a@ to one for @a@
-fromSimpleRepSpec
-  :: GenericRequires a
-  => Specification (SimpleRep a)
-  -> Specification a
+fromSimpleRepSpec ::
+  GenericRequires a =>
+  Specification (SimpleRep a) ->
+  Specification a
 fromSimpleRepSpec = \case
   ExplainSpec es s -> explainSpec es (fromSimpleRepSpec s)
   TrueSpec -> TrueSpec
@@ -736,11 +736,11 @@ fromSimpleRepSpec = \case
       Let (toGeneric_ x') (x :-> p) :: Pred
 
 -- | Convert a @`Specification` a@ to one for @`SimpleRep` a@
-toSimpleRepSpec
-  :: forall a
-   . GenericRequires a
-  => Specification a
-  -> Specification (SimpleRep a)
+toSimpleRepSpec ::
+  forall a.
+  GenericRequires a =>
+  Specification a ->
+  Specification (SimpleRep a)
 toSimpleRepSpec = \case
   ExplainSpec es s -> explainSpec es (toSimpleRepSpec s)
   TrueSpec -> TrueSpec
@@ -764,11 +764,11 @@ data BinaryShow where
 -- Term
 
 -- | Like 'appSym' but builds functions over terms, rather that just one App term.
-appTerm
-  :: forall t ds r
-   . AppRequires t ds r
-  => t ds r
-  -> FunTy (MapList Term ds) (Term r)
+appTerm ::
+  forall t ds r.
+  AppRequires t ds r =>
+  t ds r ->
+  FunTy (MapList Term ds) (Term r)
 appTerm sym = curryList @ds (App @Deps @t @ds @r sym)
 
 -- | Give a `Term` a `String` name-hint _if_ the `Term` is a variable
@@ -813,25 +813,25 @@ bind bodyf = newv :-> bodyPred
 -- work
 class Forallable t e | t -> e where
   -- | Lift the `Specification` for the elements to the collection
-  fromForAllSpec
-    :: (HasSpec t, HasSpec e) => Specification e -> Specification t
-  default fromForAllSpec
-    :: ( HasSpec e
-       , Forallable (SimpleRep t) e
-       , GenericRequires t
-       )
-    => Specification e
-    -> Specification t
+  fromForAllSpec ::
+    (HasSpec t, HasSpec e) => Specification e -> Specification t
+  default fromForAllSpec ::
+    ( HasSpec e
+    , Forallable (SimpleRep t) e
+    , GenericRequires t
+    ) =>
+    Specification e ->
+    Specification t
   fromForAllSpec es = fromSimpleRepSpec $ fromForAllSpec @(SimpleRep t) @e es
 
   -- | Get the underlying items in the collection
   forAllToList :: t -> [e]
-  default forAllToList
-    :: ( HasSimpleRep t
-       , Forallable (SimpleRep t) e
-       )
-    => t
-    -> [e]
+  default forAllToList ::
+    ( HasSimpleRep t
+    , Forallable (SimpleRep t) e
+    ) =>
+    t ->
+    [e]
   forAllToList t = forAllToList (toSimpleRep t)
 
 -- ===========================================
@@ -891,11 +891,11 @@ notMemberSpec = typeSpecOpt (emptySpec @a) . toList
 
 -- | Build a `Specification` using predicates, e.g.
 -- > constrained $ \ x -> assert $ x `elem_` lit [1..10 :: Int]
-constrained
-  :: forall a p
-   . (IsPred p, HasSpec a)
-  => (Term a -> p)
-  -> Specification a
+constrained ::
+  forall a p.
+  (IsPred p, HasSpec a) =>
+  (Term a -> p) ->
+  Specification a
 constrained body =
   let x :-> p = bind body
    in SuspendedSpec x p
@@ -935,11 +935,11 @@ addToErrorSpec _ s = s
 -- functions without pain. Usefull in the ListFoldy implementaion that deals
 -- with higher order functions.
 data Fun dom rng where
-  Fun
-    :: forall t dom rng
-     . AppRequires t dom rng
-    => t dom rng
-    -> Fun dom rng
+  Fun ::
+    forall t dom rng.
+    AppRequires t dom rng =>
+    t dom rng ->
+    Fun dom rng
 
 instance Show (Fun dom r) where
   show (Fun (f :: t dom rng)) = "(Fun " ++ show f ++ ")"
@@ -958,25 +958,25 @@ instance Eq (Fun d r) where
 
 -- | Pattern-match on an application of `fromGeneric_`, useful for writing
 -- custom rewrite rules to help the solver
-pattern FromGeneric
-  :: forall rng
-   . ()
-  => forall a
-   . (rng ~ a, GenericRequires a, HasSpec a, AppRequires BaseW '[SimpleRep a] rng)
-  => Term (SimpleRep a)
-  -> Term rng
+pattern FromGeneric ::
+  forall rng.
+  () =>
+  forall a.
+  (rng ~ a, GenericRequires a, HasSpec a, AppRequires BaseW '[SimpleRep a] rng) =>
+  Term (SimpleRep a) ->
+  Term rng
 pattern FromGeneric x <-
   (App (getWitness -> Just FromGenericW) (x :> Nil))
 
 -- | Pattern-match on an application of `toGeneric_`, useful for writing custom
 -- rewrite rules to help the solver
-pattern ToGeneric
-  :: forall rng
-   . ()
-  => forall a
-   . (rng ~ SimpleRep a, GenericRequires a, HasSpec a, AppRequires BaseW '[a] rng)
-  => Term a
-  -> Term rng
+pattern ToGeneric ::
+  forall rng.
+  () =>
+  forall a.
+  (rng ~ SimpleRep a, GenericRequires a, HasSpec a, AppRequires BaseW '[a] rng) =>
+  Term a ->
+  Term rng
 pattern ToGeneric x <- (App (getWitness -> Just ToGenericW) (x :> Nil))
 
 -- | Hints are things that only affect generation, and not validation. For instance, parameters to

@@ -58,8 +58,8 @@ ppList _ Nil = []
 ppList pp (a :> as) = pp a : ppList pp as
 
 -- | Like `ppList` for a constrained pretty-printer
-ppListC
-  :: forall c f as ann. All c as => (forall a. c a => f a -> Doc ann) -> List f as -> [Doc ann]
+ppListC ::
+  forall c f as ann. All c as => (forall a. c a => f a -> Doc ann) -> List f as -> [Doc ann]
 ppListC _ Nil = []
 ppListC pp (a :> as) = pp a : ppListC @c pp as
 

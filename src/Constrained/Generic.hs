@@ -70,35 +70,35 @@ listToProd k (Identity a :> b :> as) = k (Prod a (listToProd id (b :> as)))
 prodToList :: forall as. TypeList as => ProdOver as -> List Identity as
 prodToList = go (listShape @as)
   where
-    go
-      :: forall ts
-       . List (Const ()) ts
-      -> ProdOver ts
-      -> List Identity ts
+    go ::
+      forall ts.
+      List (Const ()) ts ->
+      ProdOver ts ->
+      List Identity ts
     go Nil _ = Nil
     go (_ :> Nil) a = Identity a :> Nil
     go (_ :> ix :> ixs) (Prod a as) = Identity a :> go (ix :> ixs) as
 
-appendProd
-  :: forall xs ys
-   . (TypeList xs, TypeList ys)
-  => ProdOver xs
-  -> ProdOver ys
-  -> ProdOver (Append xs ys)
+appendProd ::
+  forall xs ys.
+  (TypeList xs, TypeList ys) =>
+  ProdOver xs ->
+  ProdOver ys ->
+  ProdOver (Append xs ys)
 appendProd xs ys = listToProd id (appendList @Identity @xs @ys (prodToList xs) (prodToList ys))
 
-splitProd
-  :: forall xs ys
-   . (TypeList xs, TypeList ys)
-  => ProdOver (Append xs ys)
-  -> Prod (ProdOver xs) (ProdOver ys)
+splitProd ::
+  forall xs ys.
+  (TypeList xs, TypeList ys) =>
+  ProdOver (Append xs ys) ->
+  Prod (ProdOver xs) (ProdOver ys)
 splitProd = go (listShape @xs) (listShape @ys)
   where
-    go
-      :: List (Const ()) as
-      -> List (Const ()) bs
-      -> ProdOver (Append as bs)
-      -> Prod (ProdOver as) (ProdOver bs)
+    go ::
+      List (Const ()) as ->
+      List (Const ()) bs ->
+      ProdOver (Append as bs) ->
+      Prod (ProdOver as) (ProdOver bs)
     go Nil _ p = Prod () p
     go (_ :> Nil) Nil p = Prod p ()
     go (_ :> Nil) (_ :> _) p = p
@@ -139,22 +139,22 @@ class Typeable (SimpleRep a) => HasSimpleRep a where
   type TheSop a = SOPOf (Rep a)
   type SimpleRep a = SOP (TheSop a)
 
-  default toSimpleRep
-    :: ( Generic a
-       , SimpleGeneric (Rep a)
-       , SimpleRep a ~ SimplifyRep (Rep a)
-       )
-    => a
-    -> SimpleRep a
+  default toSimpleRep ::
+    ( Generic a
+    , SimpleGeneric (Rep a)
+    , SimpleRep a ~ SimplifyRep (Rep a)
+    ) =>
+    a ->
+    SimpleRep a
   toSimpleRep = toSimpleRep' . from
 
-  default fromSimpleRep
-    :: ( Generic a
-       , SimpleGeneric (Rep a)
-       , SimpleRep a ~ SimplifyRep (Rep a)
-       )
-    => SimpleRep a
-    -> a
+  default fromSimpleRep ::
+    ( Generic a
+    , SimpleGeneric (Rep a)
+    , SimpleRep a ~ SimplifyRep (Rep a)
+    ) =>
+    SimpleRep a ->
+    a
   fromSimpleRep = to . fromSimpleRep'
 
 type family SimplifyRep f where
@@ -183,8 +183,8 @@ instance
   ( SimpleGeneric f
   , SimpleGeneric g
   , SopList (SOPOf f) (SOPOf g)
-  )
-  => SimpleGeneric (f :+: g)
+  ) =>
+  SimpleGeneric (f :+: g)
   where
   toSimpleRep' (L1 f) = injectSOPLeft @(SOPOf f) @(SOPOf g) $ toSimpleRep' f
   toSimpleRep' (R1 g) = injectSOPRight @(SOPOf f) @(SOPOf g) $ toSimpleRep' g
@@ -278,14 +278,14 @@ instance
   ( FunTy (ConstrOf c ((c' ::: prod) : con : constrs)) r ~ FunTy (ConstrOf c (con : constrs)) r
   , -- \^ An unfortunately roundabout way of saying `c !~ c'`
     Inject c (con : constrs) r
-  )
-  => Inject c ((c' ::: prod) : con : constrs) r
+  ) =>
+  Inject c ((c' ::: prod) : con : constrs) r
   where
   inject' k = inject' @c @(con : constrs) (k . SumRight)
 
 -- | Inject a single constructor into an SOP
-inject
-  :: forall c constrs. Inject c constrs (SOP constrs) => FunTy (ConstrOf c constrs) (SOP constrs)
+inject ::
+  forall c constrs. Inject c constrs (SOP constrs) => FunTy (ConstrOf c constrs) (SOP constrs)
 inject = inject' @c @constrs id
 
 -- Deconstructing an SOP --------------------------------------------------
@@ -328,8 +328,8 @@ instance
   , SimpleConstructor g
   , TypeList (Constr f)
   , TypeList (Constr g)
-  )
-  => SimpleConstructor (f :*: g)
+  ) =>
+  SimpleConstructor (f :*: g)
   where
   toSimpleCon' (a :*: b) = appendProd @(Constr f) @(Constr g) (toSimpleCon' a) (toSimpleCon' b)
   fromSimpleCon' constr =

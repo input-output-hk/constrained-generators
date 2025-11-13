@@ -89,8 +89,8 @@ instance
   , HasSpec k
   , HasSpec v
   , HasSpec [v]
-  )
-  => Pretty (WithPrec (MapSpec k v))
+  ) =>
+  Pretty (WithPrec (MapSpec k v))
   where
   pretty (WithPrec d s) =
     parensIf (d > 10) $
@@ -109,8 +109,8 @@ instance
   , HasSpec k
   , HasSpec v
   , HasSpec [v]
-  )
-  => Show (MapSpec k v)
+  ) =>
+  Show (MapSpec k v)
   where
   showsPrec d = shows . prettyPrec d
 
@@ -131,8 +131,8 @@ sndSpec s = mapSpec ProdSndW (mapSpec ToGenericW s)
 -- The HasSpec instance for Maps
 
 instance
-  (Ord k, HasSpec (Prod k v), HasSpec k, HasSpec v, HasSpec [v], IsNormalType k, IsNormalType v)
-  => HasSpec (Map k v)
+  (Ord k, HasSpec (Prod k v), HasSpec k, HasSpec v, HasSpec [v], IsNormalType k, IsNormalType v) =>
+  HasSpec (Map k v)
   where
   type TypeSpec (Map k v) = MapSpec k v
   type Prerequisites (Map k v) = (HasSpec k, HasSpec v)
@@ -292,8 +292,8 @@ instance
       ]
 
 instance
-  (Ord k, HasSpec k, HasSpec v, HasSpec [v], IsNormalType k, IsNormalType v)
-  => HasGenHint (Map k v)
+  (Ord k, HasSpec k, HasSpec v, HasSpec [v], IsNormalType k, IsNormalType v) =>
+  HasGenHint (Map k v)
   where
   type Hint (Map k v) = Integer
   giveHint h = typeSpec $ defaultMapSpec {mapSpecHint = Just h}
@@ -306,8 +306,8 @@ instance
 data MapW (dom :: [Type]) (rng :: Type) where
   DomW :: (HasSpec k, HasSpec v, IsNormalType k, IsNormalType v, Ord k) => MapW '[Map k v] (Set k)
   RngW :: (HasSpec k, HasSpec v, IsNormalType k, IsNormalType v, Ord k) => MapW '[Map k v] [v]
-  LookupW
-    :: (HasSpec k, HasSpec v, IsNormalType k, IsNormalType v, Ord k) => MapW '[k, Map k v] (Maybe v)
+  LookupW ::
+    (HasSpec k, HasSpec v, IsNormalType k, IsNormalType v, Ord k) => MapW '[k, Map k v] (Maybe v)
 
 deriving instance Eq (MapW dom rng)
 
@@ -396,31 +396,31 @@ instance Logic MapW where
 ------------------------------------------------------------------------
 
 -- | Take the domain of a `Map` as a `Set`
-dom_
-  :: (HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k, IsNormalType v)
-  => Term (Map k v)
-  -> Term (Set k)
+dom_ ::
+  (HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k, IsNormalType v) =>
+  Term (Map k v) ->
+  Term (Set k)
 dom_ = appTerm DomW
 
 -- | Take the range of a `Map` as a list
-rng_
-  :: (HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v)
-  => Term (Map k v)
-  -> Term [v]
+rng_ ::
+  (HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =>
+  Term (Map k v) ->
+  Term [v]
 rng_ = appTerm RngW
 
 -- | Lookup a key in the `Map`
-lookup_
-  :: (HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v)
-  => Term k
-  -> Term (Map k v)
-  -> Term (Maybe v)
+lookup_ ::
+  (HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =>
+  Term k ->
+  Term (Map k v) ->
+  Term (Maybe v)
 lookup_ = appTerm LookupW
 
 -- | Check if a key is a member of the map
-mapMember_
-  :: (HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v)
-  => Term k
-  -> Term (Map k v)
-  -> Term Bool
+mapMember_ ::
+  (HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =>
+  Term k ->
+  Term (Map k v) ->
+  Term Bool
 mapMember_ k m = not_ $ lookup_ k m ==. lit Nothing
