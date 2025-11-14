@@ -22,6 +22,7 @@ module Constrained.Core (
   NonEmpty ((:|)),
   Evidence (..),
   unionWithMaybe,
+  nubOrd,
 ) where
 
 import Constrained.List (
@@ -130,3 +131,13 @@ instance Typeable c => Show (Evidence c) where
 unionWithMaybe :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
 unionWithMaybe f ma ma' = (f <$> ma <*> ma') <|> ma <|> ma'
 
+-- | Strip out duplicates (in n-log(n) time, by building an intermediate Set)
+nubOrd :: Ord a => [a] -> [a]
+nubOrd =
+  loop mempty
+  where
+    loop _ [] = []
+    loop s (a : as)
+      | a `Set.member` s = loop s as
+      | otherwise =
+          let s' = Set.insert a s in s' `seq` a : loop s' as

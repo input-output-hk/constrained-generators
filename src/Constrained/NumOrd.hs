@@ -56,7 +56,7 @@ module Constrained.NumOrd (
 import Constrained.AbstractSyntax
 import Constrained.Base
 import Constrained.Conformance
-import Constrained.Core (Value (..), unionWithMaybe)
+import Constrained.Core (Value (..), unionWithMaybe, nubOrd)
 import Constrained.FunctionSymbol
 import Constrained.GenT
 import Constrained.Generic
@@ -361,17 +361,6 @@ conformsToNumSpec i (NumSpecInterval ml mu) = maybe True (<= i) ml && maybe True
 -- could benefit from type specific implementations for numbers. Those
 -- implementations are found here
 -- =====================================================================
-
--- | Strip out duplicates (in n-log(n) time, by building an intermediate Set)
-nubOrd :: Ord a => [a] -> [a]
-nubOrd =
-  loop mempty
-  where
-    loop _ [] = []
-    loop s (a : as)
-      | a `Set.member` s = loop s as
-      | otherwise =
-          let s' = Set.insert a s in s' `seq` a : loop s' as
 
 -- | Builds a MemberSpec, but returns an Error spec if the list is empty
 nubOrdMemberSpec :: Ord a => String -> [a] -> Specification a
@@ -936,7 +925,7 @@ instance Logic IntW where
 
   propagateMemberSpec AddW (HOLE :<: i) es =
     memberSpec
-      (nub $ mapMaybe (safeSubtract i) (NE.toList es))
+      (nubOrd $ mapMaybe (safeSubtract i) (NE.toList es))
       ( NE.fromList
           [ "propagateSpecFn on (" ++ show i ++ " +. HOLE)"
           , "The Spec is a MemberSpec = " ++ show es -- show (MemberSpec @HasSpec @TS es)
