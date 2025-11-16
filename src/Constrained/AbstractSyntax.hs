@@ -104,6 +104,8 @@ runTermE env = \case
   V v -> case Env.lookup env v of
     Just a -> Right a
     Nothing -> Left (pure ("Couldn't find " ++ show v ++ " in " ++ show env))
+  -- The first two cases here are an optimization to avoid dispatching to `mapMList` (which does all sorts of
+  -- unpacking and packing and doesn't fuse nicely with `uncurryList_`)
   App f (ta :> Nil) -> semantics f <$> runTermE env ta
   App f (ta :> tb :> Nil) -> semantics f <$> runTermE env ta <*> runTermE env tb
   App f ts -> do
