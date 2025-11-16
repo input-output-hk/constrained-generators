@@ -104,6 +104,8 @@ runTermE env = \case
   V v -> case Env.lookup env v of
     Just a -> Right a
     Nothing -> Left (pure ("Couldn't find " ++ show v ++ " in " ++ show env))
+  App f (ta :> Nil) -> semantics f <$> runTermE env ta
+  App f (ta :> tb :> Nil) -> semantics f <$> runTermE env ta <*> runTermE env tb
   App f ts -> do
     vs <- mapMList (fmap Identity . runTermE env) ts
     pure $ uncurryList_ runIdentity (semantics f) vs
