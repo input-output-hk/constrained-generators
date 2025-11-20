@@ -129,4 +129,3 @@ instance Typeable c => Show (Evidence c) where
 -- | Take the union of two `Maybe` values with a given union operator
 unionWithMaybe :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
 unionWithMaybe f ma ma' = (f <$> ma <*> ma') <|> ma <|> ma'
-
