@@ -71,7 +71,6 @@ import Data.List (nub)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe
-import qualified Data.Set as Set
 import Data.Typeable (typeOf)
 import Data.Word
 import GHC.Int
