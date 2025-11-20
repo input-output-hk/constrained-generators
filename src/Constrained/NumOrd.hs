@@ -56,7 +56,7 @@ module Constrained.NumOrd (
 import Constrained.AbstractSyntax
 import Constrained.Base
 import Constrained.Conformance
-import Constrained.Core (Value (..), unionWithMaybe, nubOrd)
+import Constrained.Core (Value (..), unionWithMaybe)
 import Constrained.FunctionSymbol
 import Constrained.GenT
 import Constrained.Generic
@@ -64,6 +64,7 @@ import Constrained.List
 import Constrained.PrettyUtils
 import Control.Applicative ((<|>))
 import Control.Arrow (first)
+import Data.Containers.ListUtils
 import Data.Foldable
 import Data.Kind
 import Data.List (nub)
