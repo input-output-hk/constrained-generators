@@ -110,4 +110,4 @@ return []
 
 tests :: Bool -> Spec
 tests _nightly =
-  describe "Graph tests" $ sequence_ [ prop n (checkCoverage $ withMaxSuccess 1000 p) | (n, p) <- $allProperties ]
+  describe "Graph tests" $ parallel $ sequence_ [ prop n (checkCoverage $ withMaxSuccess 1000 p) | (n, p) <- $allProperties ]
