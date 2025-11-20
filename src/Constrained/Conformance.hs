@@ -13,6 +13,7 @@ module Constrained.Conformance (
   monitorSpec,
   conformsToSpec,
   conformsToSpecE,
+  allConformToSpec,
   satisfies,
   checkPredE,
   checkPredsE,
@@ -30,6 +31,8 @@ import Constrained.Syntax
 import Data.List (intersect, nub)
 import Data.List.NonEmpty qualified as NE
 import Data.Maybe
+import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.Semigroup (sconcat)
 import Prettyprinter hiding (cat)
 import Test.QuickCheck (Property, Testable, property)
@@ -170,6 +173,11 @@ conformsToSpec :: HasSpec a => a -> Specification a -> Bool
 conformsToSpec a x = case conformsToSpecE a x (pure "call to conformsToSpecE") of
   Nothing -> True
   Just _ -> False
+
+allConformToSpec :: (HasSpec a, Ord a) => Set a -> Specification a -> Bool
+allConformToSpec xs (MemberSpec ys) = null $ xs Set.\\ Set.fromList (NE.toList ys)
+allConformToSpec _ TrueSpec = True
+allConformToSpec xs spec = all (`conformsToSpec` spec) xs
 
 -- | Embed a `Specification` in a `Pred`. Useful for re-using `Specification`s
 satisfies :: forall a. HasSpec a => Term a -> Specification a -> Pred

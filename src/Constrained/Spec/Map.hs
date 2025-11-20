@@ -184,14 +184,19 @@ instance
                 , geqSpec 0
                 ]
         n <- genFromSpecT size'
-        let go 0 _ m = pure m
-            go n' kvs' m = do
+        let go sz 0 slow kvs' m
+              | fromInteger sz == Map.size m = pure m
+              | not slow = go sz (sz - fromIntegral (Map.size m)) True (kvs' <> typeSpec (Cartesian (notMemberSpec (Map.keys m)) mempty)) m
+              | otherwise = fatalError "The impossible happened"
+            go sz n' slow kvs' m = do
               mkv <- inspect $ genFromSpecT kvs'
               case mkv of
                 Result (k, v) ->
                   go
+                    sz
                     (n' - 1)
-                    (kvs' <> typeSpec (Cartesian (notEqualSpec k) mempty))
+                    slow
+                    (kvs' <> if slow then typeSpec (Cartesian (notEqualSpec k) mempty) else mempty)
                     (Map.insert k v m)
                 GenError msgs ->
                   if sizeOf m `conformsToSpec` size
@@ -210,15 +215,11 @@ instance
                         , "The computed target size " ++ show n
                         , "Fatal error messages"
                         , "<<<---"
-                        -- , "The kvs Spec"
-                        -- , " >>>> "++ show $ "  kvs' = " <> pretty kvs'
-                        -- , "The simplified kvs Spec"
-                        -- , " >>>> "++ show(pretty (simplifySpec kvs'))
                         ]
                         <> catMessageList msgs
                         <> (pure "--->>>")
                     )
-        explain ("  The number we are trying for: n = " ++ show n) $ go n kvs mempty
+        explain ("  The number we are trying for: n = " ++ show n) $ go n n False kvs mempty
   genFromTypeSpec (MapSpec mHint mustKeys mustVals size (simplifySpec -> kvs) foldSpec) = do
     !mustMap <- explain "Make the mustMap" $ forM (Set.toList mustKeys) $ \k -> do
       let vSpec = constrained $ \v -> satisfies (pair_ (Lit k) v) kvs
