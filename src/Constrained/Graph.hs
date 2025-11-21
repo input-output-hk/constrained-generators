@@ -25,6 +25,8 @@ module Constrained.Graph (
 
 import Control.Monad
 import Data.Foldable
+-- TODO: consider using more of this
+import Data.Graph qualified as G
 import Data.List (nub)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -33,8 +35,6 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Prettyprinter
 import Test.QuickCheck
--- TODO: consider using more of this
-import Data.Graph qualified as G
 
 -- | A graph with unlabeled edges for keeping track of dependencies
 data Graph node = Graph
@@ -63,33 +63,51 @@ instance Pretty n => Pretty (Graph n) where
 
 -- | Construct a graph
 mkGraph :: Ord node => Map node (Set node) -> Graph node
-mkGraph e0 = Graph e $ Map.unionsWith (<>)
-                          [ Map.fromList $ (p, mempty) : [ (c, Set.singleton p)
-                                                         | c <- Set.toList cs
-                                                         ]
-                          | (p, cs) <- Map.toList e
-                          ]
-  where e = Map.unionWith (<>) e0 (Map.fromList [ (c, mempty) | (_, cs) <- Map.toList e0
-                                                              , c <- Set.toList cs
-                                                ])
+mkGraph e0 =
+  Graph e $
+    Map.unionsWith
+      (<>)
+      [ Map.fromList $
+          (p, mempty)
+            : [ (c, Set.singleton p)
+              | c <- Set.toList cs
+              ]
+      | (p, cs) <- Map.toList e
+      ]
+  where
+    e =
+      Map.unionWith
+        (<>)
+        e0
+        ( Map.fromList
+            [ (c, mempty)
+            | (_, cs) <- Map.toList e0
+            , c <- Set.toList cs
+            ]
+        )
 
 instance (Arbitrary node, Ord node) => Arbitrary (Graph node) where
   arbitrary =
-    frequency [ (1, mkGraph <$> arbitrary)
-              , (3, do order <- nub <$> arbitrary
-                       mkGraph <$> buildGraph order
-                )
-              ]
-    where buildGraph [] = return mempty
-          buildGraph [n] = return (Map.singleton n mempty)
-          buildGraph (n:ns) = do
-            deps <- listOf (elements ns)
-            Map.insert n (Set.fromList deps) <$> buildGraph ns
+    frequency
+      [ (1, mkGraph <$> arbitrary)
+      ,
+        ( 3
+        , do
+            order <- nub <$> arbitrary
+            mkGraph <$> buildGraph order
+        )
+      ]
+    where
+      buildGraph [] = return mempty
+      buildGraph [n] = return (Map.singleton n mempty)
+      buildGraph (n : ns) = do
+        deps <- listOf (elements ns)
+        Map.insert n (Set.fromList deps) <$> buildGraph ns
   shrink g =
     [ mkGraph e'
     | e <- shrink (edges g)
-    -- If we don't do this it's very easy to introduce a shrink-loop
-    , let e' = fmap (\ xs -> Set.filter (`Map.member` e) xs) e
+    , -- If we don't do this it's very easy to introduce a shrink-loop
+    let e' = fmap (\xs -> Set.filter (`Map.member` e) xs) e
     ]
 
 -- | Get all the nodes of a graph
@@ -142,7 +160,7 @@ transitiveDependencies :: Ord node => node -> Graph node -> Set node
 transitiveDependencies x (Graph e _) = go mempty (Set.toList $ fromMaybe mempty $ Map.lookup x e)
   where
     go deps [] = deps
-    go deps (y:ys)
+    go deps (y : ys)
       | y `Set.member` deps = go deps ys
       | otherwise = go (Set.insert y deps) (ys ++ Set.toList (fromMaybe mempty $ Map.lookup y e))
 
@@ -174,16 +192,16 @@ topsort gr@(Graph e _) = go [] e
 findCycle :: Ord node => Graph node -> [node]
 findCycle g@(Graph e _) = mkCycle . concat . take 1 . filter isCyclic . map (map tr) . concatMap cycles . G.scc $ gr
   where
-    edgeList =  [ (n, n, Set.toList es) | (n, es) <- Map.toList e ]
+    edgeList = [(n, n, Set.toList es) | (n, es) <- Map.toList e]
     (gr, tr0, _) = G.graphFromEdges edgeList
     tr x = let (n, _, _) = tr0 x in n
     cycles (G.Node a []) = [[a]]
-    cycles (G.Node a as) = (a:) <$> concatMap cycles as
+    cycles (G.Node a as) = (a :) <$> concatMap cycles as
     isCyclic [] = False
     isCyclic [a] = dependsOn a a g
     isCyclic _ = True
     -- Removes a non-dependent stem from the start of the dependencies
-    mkCycle ns = let l = last ns in dropWhile (\ n -> not $ dependsOn l n g) ns
+    mkCycle ns = let l = last ns in dropWhile (\n -> not $ dependsOn l n g) ns
 
 -- | Get the dependencies of a node in the graph, `mempty` if the node is not
 -- in the graph

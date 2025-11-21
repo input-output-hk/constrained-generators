@@ -31,9 +31,9 @@ import Constrained.Syntax
 import Data.List (intersect, nub)
 import Data.List.NonEmpty qualified as NE
 import Data.Maybe
+import Data.Semigroup (sconcat)
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.Semigroup (sconcat)
 import Prettyprinter hiding (cat)
 import Test.QuickCheck (Property, Testable, property)
 

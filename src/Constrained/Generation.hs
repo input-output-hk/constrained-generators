@@ -50,7 +50,6 @@ module Constrained.Generation (
   EqW (..),
   SumSpec (..),
   pattern SumSpec,
-
   mapSpec,
   forwardPropagateSpec,
 ) where
@@ -159,10 +158,10 @@ shrinkWithSpec (ExplainSpec _ s) a = shrinkWithSpec s a
 shrinkWithSpec (simplifySpec -> spec) a = case spec of
   -- TODO: It would be nice to avoid the extra `conformsToSpec` check here and only look
   -- at the cant set instead
-  TypeSpec s _ -> [ a' | a' <- shrinkWithTypeSpec s a, a' `conformsToSpec` spec ]
+  TypeSpec s _ -> [a' | a' <- shrinkWithTypeSpec s a, a' `conformsToSpec` spec]
   SuspendedSpec x p -> shrinkFromPreds p x a
   -- TODO: it would be nice if there was some better way of doing this
-  MemberSpec as -> [ a' | a' <- unconstrainedShrink a, a' `elem` as ]
+  MemberSpec as -> [a' | a' <- unconstrainedShrink a, a' `elem` as]
   TrueSpec -> unconstrainedShrink a
   ErrorSpec {} -> []
   -- Should be impossible?
@@ -176,22 +175,22 @@ shrinkFromPreds p
         Nothing -> pure ()
         Just err -> explainNE err $ fatalError "Trying to shrink a bad value, don't do that!"
       if not $ Name x `appearsIn` p -- NOTE: this is safe because we just checked that p is SAT above
-      then return $ unconstrainedShrink a
-      else do
-        -- Get an `env` for the original value
-        initialEnv <- envFromPred (Env.singleton x a) p
-        return
-          [ a'
-          | -- Shrink the initialEnv
-          env' <- shrinkEnvFromPlan initialEnv plan
-          , -- Get the value of the constrained variable `x` in the shrunk env
-          Just a' <- [Env.lookup env' x]
-          , -- NOTE: this is necessary because it's possible that changing
-          -- a particular value in the env during shrinking might not result
-          -- in the value of `x` changing and there is no better way to know than
-          -- to do this.
-          a' /= a
-          ]
+        then return $ unconstrainedShrink a
+        else do
+          -- Get an `env` for the original value
+          initialEnv <- envFromPred (Env.singleton x a) p
+          return
+            [ a'
+            | -- Shrink the initialEnv
+            env' <- shrinkEnvFromPlan initialEnv plan
+            , -- Get the value of the constrained variable `x` in the shrunk env
+            Just a' <- [Env.lookup env' x]
+            , -- NOTE: this is necessary because it's possible that changing
+            -- a particular value in the env during shrinking might not result
+            -- in the value of `x` changing and there is no better way to know than
+            -- to do this.
+            a' /= a
+            ]
   | otherwise = error "Bad pred"
 
 -- Start with a valid Env for the plan and try to shrink it
@@ -226,7 +225,7 @@ fixupWithSpec spec a
   | a `conformsToSpec` spec = Just a
   | otherwise = case spec of
       MemberSpec (a' :| _) -> Just a'
-      TypeSpec ts _ -> fixupWithTypeSpec ts a >>= \ a' -> a' <$  guard (conformsToSpec a' spec)
+      TypeSpec ts _ -> fixupWithTypeSpec ts a >>= \a' -> a' <$ guard (conformsToSpec a' spec)
       _ -> listToMaybe $ filter (`conformsToSpec` spec) (shrinkWithSpec TrueSpec a)
 
 -- Debugging --------------------------------------------------------------
@@ -269,9 +268,11 @@ unsafeSubstStage env (SolverStage y ps spec relevant) =
 substStage :: HasSpec a => Set Name -> Var a -> a -> SolverStage -> SolverStage
 substStage rel' x val (SolverStage y ps spec relevant) =
   normalizeSolverStage $ SolverStage y (substPred env <$> ps) spec relevant'
-  where env = Env.singleton x val
-        relevant' | Name x `appearsIn` ps = rel' <> relevant
-                  | otherwise = relevant
+  where
+    env = Env.singleton x val
+    relevant'
+      | Name x `appearsIn` ps = rel' <> relevant
+      | otherwise = relevant
 
 normalizeSolverStage :: SolverStage -> SolverStage
 normalizeSolverStage (SolverStage x ps spec relevant) = SolverStage x ps'' (spec <> spec') relevant
@@ -376,7 +377,7 @@ linearize preds graph = do
               ]
     go (n@(Name x) : ns) ps = do
       let (nps, ops) = partition (isLastVariable n . fst) ps
-      (normalizeSolverStage (SolverStage x (map snd nps) mempty mempty):) <$> go ns ops
+      (normalizeSolverStage (SolverStage x (map snd nps) mempty mempty) :) <$> go ns ops
 
     isLastVariable n set = n `Set.member` set && solvableFrom n (Set.delete n set) graph
 
@@ -902,7 +903,8 @@ mergeSolverStage :: SolverStage -> [SolverStage] -> [SolverStage]
 mergeSolverStage (SolverStage x ps spec relevant) plan =
   [ case eqVar x y of
       Just Refl ->
-        normalizeSolverStage $ SolverStage
+        normalizeSolverStage $
+          SolverStage
             y
             (ps ++ ps')
             (spec <> spec')
@@ -917,38 +919,41 @@ isEmptyPlan (SolverPlan plan) = null plan
 stepPlan :: MonadGenError m => SolverPlan -> Env -> SolverPlan -> GenT m (Env, SolverPlan)
 stepPlan _ env plan@(SolverPlan []) = pure (env, plan)
 stepPlan (SolverPlan origStages) env (SolverPlan (stage@(SolverStage (x :: Var a) ps spec relevant) : pl)) = do
-  let errorMessage = "Failed to step the plan" />
-                        vsep [ "Relevant parts of the original plan:" //> pretty narrowedOrigPlan
-                             , "Already generated variables:" //> pretty narrowedEnv
-                             , "Current stage:" //> pretty stage
-                             ]
+  let errorMessage =
+        "Failed to step the plan"
+          /> vsep
+            [ "Relevant parts of the original plan:" //> pretty narrowedOrigPlan
+            , "Already generated variables:" //> pretty narrowedEnv
+            , "Current stage:" //> pretty stage
+            ]
       relevant' = Set.insert (Name x) relevant
-      narrowedOrigPlan = SolverPlan $ [ st | st@(SolverStage v _ _ _) <- origStages, Name v `Set.member` relevant' ]
-      narrowedEnv = Env.filterKeys env (\v -> nameOf v `Set.member` (Set.map (\ (Name n) -> nameOf n) relevant'))
+      narrowedOrigPlan = SolverPlan $ [st | st@(SolverStage v _ _ _) <- origStages, Name v `Set.member` relevant']
+      narrowedEnv = Env.filterKeys env (\v -> nameOf v `Set.member` (Set.map (\(Name n) -> nameOf n) relevant'))
   explain (show errorMessage) $ do
     when (isErrorLike spec) $
       genError "The specification in the current stage is unsatisfiable, giving up."
     when (not $ null ps) $
-      fatalError "Something went wrong and not all predicates have been discharged. Report this as a bug in Constrained.Generation"
+      fatalError
+        "Something went wrong and not all predicates have been discharged. Report this as a bug in Constrained.Generation"
     val <- genFromSpecT spec
     let env1 = Env.extend x val env
-    pure (env1, backPropagation relevant' $ SolverPlan (substStage relevant' x val <$> pl) )
+    pure (env1, backPropagation relevant' $ SolverPlan (substStage relevant' x val <$> pl))
 
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
 genFromPreds :: forall m. MonadGenError m => Env -> Pred -> GenT m Env
 -- TODO: remove this once optimisePred does a proper fixpoint computation
 genFromPreds env0 (optimisePred . optimisePred -> preds) = do
-    -- NOTE: this is just lazy enough that the work of flattening,
-    -- computing dependencies, and linearizing is memoized in
-    -- properties that use `genFromPreds`.
-    origPlan <- runGE $ prepareLinearization preds
-    let go :: Env -> SolverPlan -> GenT m Env
-        go env plan | isEmptyPlan plan = pure env
-        go env plan = do
-          (env', plan') <- stepPlan origPlan env plan
-          go env' plan'
-    go env0 origPlan
+  -- NOTE: this is just lazy enough that the work of flattening,
+  -- computing dependencies, and linearizing is memoized in
+  -- properties that use `genFromPreds`.
+  origPlan <- runGE $ prepareLinearization preds
+  let go :: Env -> SolverPlan -> GenT m Env
+      go env plan | isEmptyPlan plan = pure env
+      go env plan = do
+        (env', plan') <- stepPlan origPlan env plan
+        go env' plan'
+  go env0 origPlan
 
 -- | Push as much information we can backwards through the plan.
 backPropagation :: Set Name -> SolverPlan -> SolverPlan
@@ -967,11 +972,23 @@ backPropagation relevant (SolverPlan initplan) = SolverPlan (go [] (reverse init
           , [Name xr] <- Set.toList $ freeVarSet tr
           , Name x `elem` [Name xl, Name xr]
           , Result ctxL <- toCtx xl tl
-          , Result ctxR <- toCtx xr tr
-          = case (eqVar x xl, eqVar x xr) of
-              (Just Refl, _) -> [SolverStage xr [] (propagateSpec (forwardPropagateSpec spec ctxL) ctxR) (Set.insert (Name x) relevant)]
-              (_, Just Refl) -> [SolverStage xl [] (propagateSpec (forwardPropagateSpec spec ctxR) ctxL) (Set.insert (Name x) relevant)]
-              _ -> error "The impossible happened"
+          , Result ctxR <- toCtx xr tr =
+              case (eqVar x xl, eqVar x xr) of
+                (Just Refl, _) ->
+                  [ SolverStage
+                      xr
+                      []
+                      (propagateSpec (forwardPropagateSpec spec ctxL) ctxR)
+                      (Set.insert (Name x) relevant)
+                  ]
+                (_, Just Refl) ->
+                  [ SolverStage
+                      xl
+                      []
+                      (propagateSpec (forwardPropagateSpec spec ctxR) ctxL)
+                      (Set.insert (Name x) relevant)
+                  ]
+                _ -> error "The impossible happened"
         newStage _ = []
 
 -- | Function symbols for `(==.)`
@@ -1372,7 +1389,7 @@ instance Pretty SolverStage where
               ++ ["_" | null stagePreds && isTrueSpec stageSpec]
           )
 
-newtype SolverPlan = SolverPlan { solverPlan :: [SolverStage] }
+newtype SolverPlan = SolverPlan {solverPlan :: [SolverStage]}
 
 instance Pretty SolverPlan where
   pretty SolverPlan {..} =
@@ -1418,4 +1435,3 @@ forwardPropagateSpec s CtxHOLE = s
 forwardPropagateSpec s (CtxApp f (c :? Nil))
   | Evidence <- ctxHasSpec c = mapSpec f (forwardPropagateSpec s c)
 forwardPropagateSpec _ _ = TrueSpec
-

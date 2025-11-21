@@ -1,6 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DerivingVia #-}
@@ -744,8 +744,9 @@ instance {-# OVERLAPPABLE #-} (HasSpec a, MaybeBounded a, Integral a, TypeSpec a
   divideSpec 0 _ = TrueSpec
   divideSpec a (NumSpecInterval (unionWithMaybe max lowerBound -> ml) (unionWithMaybe min upperBound -> mu)) = typeSpec ts
     where
-      ts | a > 0 = NumSpecInterval ml' mu'
-         | otherwise = NumSpecInterval mu' ml'
+      ts
+        | a > 0 = NumSpecInterval ml' mu'
+        | otherwise = NumSpecInterval mu' ml'
       ml' = adjustLowerBound <$> ml
       mu' = adjustUpperBound <$> mu
 
@@ -755,19 +756,19 @@ instance {-# OVERLAPPABLE #-} (HasSpec a, MaybeBounded a, Integral a, TypeSpec a
         | a == 1 = l
         | a == -1 = negate l
         | otherwise =
-          let r = l `div` a in
-          if toInteger r * toInteger a < toInteger l
-          then r + signum a
-          else r
+            let r = l `div` a
+             in if toInteger r * toInteger a < toInteger l
+                  then r + signum a
+                  else r
 
       adjustUpperBound u
-        | a == 1  = u
+        | a == 1 = u
         | a == -1 = negate u
         | otherwise =
-          let r = u `div` a in
-          if toInteger r * toInteger a > toInteger u
-          then r - signum a
-          else r
+            let r = u `div` a
+             in if toInteger r * toInteger a > toInteger u
+                  then r - signum a
+                  else r
 
 instance HasDivision (Ratio Integer) where
   doDivide = (/)
@@ -775,26 +776,24 @@ instance HasDivision (Ratio Integer) where
   divideSpec 0 _ = TrueSpec
   divideSpec a (NumSpecInterval ml mu) = typeSpec ts
     where
-      ts | a > 0 = NumSpecInterval ml' mu'
-         | otherwise = NumSpecInterval mu' ml'
+      ts
+        | a > 0 = NumSpecInterval ml' mu'
+        | otherwise = NumSpecInterval mu' ml'
       ml' = adjustLowerBound <$> ml
       mu' = adjustUpperBound <$> mu
       adjustLowerBound l =
         let r = l / a
             l' = r * a
-        in
-        if l' < l
-        then r + (l - l') * 2 / a
-        else r
+         in if l' < l
+              then r + (l - l') * 2 / a
+              else r
 
       adjustUpperBound u =
         let r = u / a
             u' = r * a
-        in
-        if u < u'
-        then r - (u' - u) * 2 / a
-        else r
-
+         in if u < u'
+              then r - (u' - u) * 2 / a
+              else r
 
 instance HasDivision Float where
   doDivide = (/)
@@ -802,25 +801,24 @@ instance HasDivision Float where
   divideSpec 0 _ = TrueSpec
   divideSpec a (NumSpecInterval ml mu) = typeSpec ts
     where
-      ts | a > 0 = NumSpecInterval ml' mu'
-         | otherwise = NumSpecInterval mu' ml'
+      ts
+        | a > 0 = NumSpecInterval ml' mu'
+        | otherwise = NumSpecInterval mu' ml'
       ml' = adjustLowerBound <$> ml
       mu' = adjustUpperBound <$> mu
       adjustLowerBound l =
         let r = l / a
             l' = r * a
-        in
-        if l' < l
-        then r + (l - l') * 2 / a
-        else r
+         in if l' < l
+              then r + (l - l') * 2 / a
+              else r
 
       adjustUpperBound u =
         let r = u / a
             u' = r * a
-        in
-        if u < u'
-        then r - (u' - u) * 2 / a
-        else r
+         in if u < u'
+              then r - (u' - u) * 2 / a
+              else r
 
 instance HasDivision Double where
   doDivide = (/)
@@ -828,25 +826,24 @@ instance HasDivision Double where
   divideSpec 0 _ = TrueSpec
   divideSpec a (NumSpecInterval ml mu) = typeSpec ts
     where
-      ts | a > 0 = NumSpecInterval ml' mu'
-         | otherwise = NumSpecInterval mu' ml'
+      ts
+        | a > 0 = NumSpecInterval ml' mu'
+        | otherwise = NumSpecInterval mu' ml'
       ml' = adjustLowerBound <$> ml
       mu' = adjustUpperBound <$> mu
       adjustLowerBound l =
         let r = l / a
             l' = r * a
-        in
-        if l' < l
-        then r + (l - l') * 2 / a
-        else r
+         in if l' < l
+              then r + (l - l') * 2 / a
+              else r
 
       adjustUpperBound u =
         let r = u / a
             u' = r * a
-        in
-        if u < u'
-        then r - (u' - u) * 2 / a
-        else r
+         in if u < u'
+              then r - (u' - u) * 2 / a
+              else r
 
 -- | A type that we can reason numerically about in constraints
 type Numeric a = (HasSpec a, Ord a, Num a, TypeSpec a ~ NumSpec a, MaybeBounded a, HasDivision a)
@@ -913,15 +910,16 @@ instance Logic IntW where
   propagateTypeSpec NegateW (Unary HOLE) ts cant = negateSpec ts <> notMemberSpec (map negate cant)
   propagateTypeSpec MultW (HOLE :<: 0) ts cant
     | 0 `conformsToSpec` TypeSpec ts cant = TrueSpec
-    | otherwise = ErrorSpec $ NE.fromList [ "zero" ]
+    | otherwise = ErrorSpec $ NE.fromList ["zero"]
   propagateTypeSpec MultW (HOLE :<: i) ts cant = divideSpec i ts <> notMemberSpec (mapMaybe (flip invertMult i) cant)
   propagateTypeSpec MultW ctx ts cant = propagateTypeSpec MultW (flipCtx ctx) ts cant
   propagateTypeSpec SignumW (Unary HOLE) ts cant =
-    constrained $ \ x ->
-      [ x `satisfies` notMemberSpec [0] | not $ ok 0 ] ++
-      [ Assert $ 0 <=. x                | not $ ok (-1) ] ++
-      [ Assert $ x <=. 0                | not $ ok 1 ]
-    where ok = flip conformsToSpec (TypeSpec ts cant)
+    constrained $ \x ->
+      [x `satisfies` notMemberSpec [0] | not $ ok 0]
+        ++ [Assert $ 0 <=. x | not $ ok (-1)]
+        ++ [Assert $ x <=. 0 | not $ ok 1]
+    where
+      ok = flip conformsToSpec (TypeSpec ts cant)
 
   propagateMemberSpec AddW (HOLE :<: i) es =
     memberSpec
@@ -936,15 +934,16 @@ instance Logic IntW where
   propagateMemberSpec NegateW (Unary HOLE) es = MemberSpec $ NE.nub $ fmap negate es
   propagateMemberSpec MultW (HOLE :<: 0) es
     | 0 `elem` es = TrueSpec
-    | otherwise = ErrorSpec $ NE.fromList [ "zero" ]
+    | otherwise = ErrorSpec $ NE.fromList ["zero"]
   propagateMemberSpec MultW (HOLE :<: i) es = memberSpec (mapMaybe (flip invertMult i) (NE.toList es)) (NE.fromList ["propagateSpec"])
   propagateMemberSpec MultW ctx es = propagateMemberSpec MultW (flipCtx ctx) es
   propagateMemberSpec SignumW (Unary HOLE) es
-    | all ((`notElem` [-1, 0, 1]) . signum) es = ErrorSpec $ NE.fromList [ "signum for invalid member spec", show es ]
-    | otherwise = constrained $ \ x ->
-                    [ x `satisfies` notMemberSpec [0] | 0  `notElem` es ] ++
-                    [ Assert $ 0 <=. x                | -1 `notElem` es ] ++
-                    [ Assert $ x <=. 0                | 1  `notElem` es ]
+    | all ((`notElem` [-1, 0, 1]) . signum) es =
+        ErrorSpec $ NE.fromList ["signum for invalid member spec", show es]
+    | otherwise = constrained $ \x ->
+        [x `satisfies` notMemberSpec [0] | 0 `notElem` es]
+          ++ [Assert $ 0 <=. x | -1 `notElem` es]
+          ++ [Assert $ x <=. 0 | 1 `notElem` es]
 
   rewriteRules AddW (x :> y :> Nil) _ | x == y = Just $ 2 * x
   rewriteRules _ _ _ = Nothing
