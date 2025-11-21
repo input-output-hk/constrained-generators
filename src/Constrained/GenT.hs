@@ -60,7 +60,9 @@ module Constrained.GenT (
   listFromGE,
 ) where
 
+import Control.Arrow (second)
 import Control.Monad
+import Control.Monad.Trans
 import Data.Foldable
 import Data.List.NonEmpty (NonEmpty ((:|)), (<|))
 import Data.List.NonEmpty qualified as NE
@@ -70,8 +72,6 @@ import System.Random
 import Test.QuickCheck hiding (Args, Fun)
 import Test.QuickCheck.Gen
 import Test.QuickCheck.Random
-import Control.Arrow (second)
-import Control.Monad.Trans
 
 -- ==============================================================
 -- The GE Monad
@@ -127,27 +127,27 @@ runThreadingGen g = MkGen $ \seed size -> do
   snd <$> unThreadingGen g seed size
 
 strictGetSize :: Applicative m => ThreadingGenT m Int
-strictGetSize = ThreadingGen $ \ seed size -> pure (seed, size)
+strictGetSize = ThreadingGen $ \seed size -> pure (seed, size)
 
 scaleThreading :: (Int -> Int) -> ThreadingGenT m a -> ThreadingGenT m a
-scaleThreading f sg = ThreadingGen $ \ seed size -> unThreadingGen sg seed (f size)
+scaleThreading f sg = ThreadingGen $ \seed size -> unThreadingGen sg seed (f size)
 
-newtype ThreadingGenT m a = ThreadingGen { unThreadingGen :: QCGen -> Int -> m (QCGen, a) }
+newtype ThreadingGenT m a = ThreadingGen {unThreadingGen :: QCGen -> Int -> m (QCGen, a)}
 
 instance Functor m => Functor (ThreadingGenT m) where
-  fmap f (ThreadingGen g) = ThreadingGen $ \ seed size -> second f <$> g seed size
+  fmap f (ThreadingGen g) = ThreadingGen $ \seed size -> second f <$> g seed size
 
 instance Monad m => Applicative (ThreadingGenT m) where
-  pure a = ThreadingGen $ \ seed _ -> pure (seed, a)
+  pure a = ThreadingGen $ \seed _ -> pure (seed, a)
   (<*>) = ap
 
 instance Monad m => Monad (ThreadingGenT m) where
-  ThreadingGen g >>= k = ThreadingGen $ \ seed size -> do
+  ThreadingGen g >>= k = ThreadingGen $ \seed size -> do
     (seed', a) <- g seed size
     unThreadingGen (k a) seed' size
 
 instance MonadTrans ThreadingGenT where
-  lift m = ThreadingGen $ \ seed _ -> (seed,) <$> m
+  lift m = ThreadingGen $ \seed _ -> (seed,) <$> m
 
 ------------------------------------------------------------------------
 -- The GenT monad
@@ -233,7 +233,7 @@ instance MonadGenError m => MonadGenError (GenT m) where
   fatalErrors es = GenT $ \_ xs -> lift $ fatalErrors (cat es xs)
 
   -- Perhaps we want to turn fatalError into genError, if mode_ is Loose?
-  explainNE e (GenT f) = GenT $ \mode es -> ThreadingGen $ \ seed size -> explainNE e $ unThreadingGen (f mode es) seed size
+  explainNE e (GenT f) = GenT $ \mode es -> ThreadingGen $ \seed size -> explainNE e $ unThreadingGen (f mode es) seed size
 
 -- ====================================================
 -- useful operations on NonEmpty
@@ -454,7 +454,7 @@ sizeT = GenT $ \_ _ -> strictGetSize
 
 -- | Always succeeds, but returns the internal GE structure for analysis
 inspect :: forall m a. MonadGenError m => GenT GE a -> GenT m (GE a)
-inspect (GenT f) = GenT $ \ mode msgs -> liftGenToThreading $ runThreadingGen $ f mode msgs
+inspect (GenT f) = GenT $ \mode msgs -> liftGenToThreading $ runThreadingGen $ f mode msgs
 
 -- | Ignore all kinds of Errors, by squashing them into Nothing
 tryGenT :: MonadGenError m => GenT GE a -> GenT m (Maybe a)

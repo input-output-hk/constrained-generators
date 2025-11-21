@@ -1,5 +1,5 @@
-{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -735,11 +735,11 @@ buildElemList :: List (Weighted Binder) as -> Maybe (NE.NonEmpty (SumOver as))
 buildElemList Nil = Nothing
 buildElemList (Weighted Nothing (x :-> ElemPred True (V x') as) :> xs)
   | Just Refl <- eqVar x x' =
-    case xs of
-      Nil -> Just as
-      _ :> _ -> do
-        rest <- buildElemList xs
-        return $ fmap SumLeft as <> fmap SumRight rest
+      case xs of
+        Nil -> Just as
+        _ :> _ -> do
+          rest <- buildElemList xs
+          return $ fmap SumLeft as <> fmap SumRight rest
 buildElemList _ = Nothing
 
 -- | Run a `caseOn`

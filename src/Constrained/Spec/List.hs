@@ -280,8 +280,8 @@ randomInterleaving xs ys = go xs ys (length ys)
 
     go' _ xs [] _ = pure xs
     go' _ [] ys _ = pure ys
-    go' 0 (x:xs) ys l = (x:) <$> go xs ys l
-    go' i xs (y:ys) l = (y:) <$> go' (i-1) xs ys l
+    go' 0 (x : xs) ys l = (x :) <$> go xs ys l
+    go' i xs (y : ys) l = (y :) <$> go' (i - 1) xs ys l
 
 instance HasSpec a => HasGenHint [a] where
   type Hint [a] = Integer

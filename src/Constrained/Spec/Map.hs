@@ -186,7 +186,13 @@ instance
         n <- genFromSpecT size'
         let go sz 0 slow kvs' m
               | fromInteger sz == Map.size m = pure m
-              | not slow = go sz (sz - fromIntegral (Map.size m)) True (kvs' <> typeSpec (Cartesian (notMemberSpec (Map.keys m)) mempty)) m
+              | not slow =
+                  go
+                    sz
+                    (sz - fromIntegral (Map.size m))
+                    True
+                    (kvs' <> typeSpec (Cartesian (notMemberSpec (Map.keys m)) mempty))
+                    m
               | otherwise = fatalError "The impossible happened"
             go sz n' slow kvs' m = do
               mkv <- inspect $ genFromSpecT kvs'

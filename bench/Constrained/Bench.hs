@@ -10,11 +10,10 @@
 module Constrained.Bench where
 
 import Constrained.API
-import Constrained.Generation
-import Constrained.Examples.Set
-import Constrained.Examples.Map
 import Constrained.Examples.Basic
-
+import Constrained.Examples.Map
+import Constrained.Examples.Set
+import Constrained.Generation
 import Control.DeepSeq
 import Criterion
 import Data.Map (Map)

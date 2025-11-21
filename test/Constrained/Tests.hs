@@ -20,12 +20,12 @@ import Constrained.Examples.Basic
 import Constrained.Examples.Either
 import Constrained.Examples.Fold (
   Outcome (..),
-  evenSpec,
   composeEvenSpec,
+  composeOddSpec,
+  evenSpec,
   listSumComplex,
   logishProp,
   oddSpec,
-  composeOddSpec,
   pickProp,
   sum3,
   sum3WithLength,

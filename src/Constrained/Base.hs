@@ -32,7 +32,7 @@ module Constrained.Base (
   pattern (:<:),
   pattern (:>:),
   pattern Unary,
-  Ctx(..),
+  Ctx (..),
   toCtx,
   flipCtx,
   fromListCtx,
@@ -675,7 +675,7 @@ instance Show (BaseW d r) where
   show ToGenericW = "toSimpleRep"
   show FromGenericW = "fromSimpleRep"
 
-instance Syntax BaseW where
+instance Syntax BaseW
 
 instance Semantics BaseW where
   semantics FromGenericW = fromSimpleRep
