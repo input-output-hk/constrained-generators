@@ -206,6 +206,7 @@ tests nightly =
     testSpec "oddSpec" oddSpec
     testSpec "composeOddSpec" composeOddSpec
     testSpec "keysExample" keysExample
+    testSpec "failingKVSpec" failingKVSpec
 
 negativeTests :: Spec
 negativeTests =
