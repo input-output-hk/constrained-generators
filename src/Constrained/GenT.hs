@@ -206,9 +206,7 @@ fatalError = fatalErrorNE . pure
 
 -- | Attach an explanation to a computation in case of error
 explain :: MonadGenError m => String -> m a -> m a
-explain s
-  | null s = id
-  | otherwise = explainNE (pure s)
+explain = explainNE . pure
 
 -- GE instance
 

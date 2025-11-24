@@ -153,8 +153,8 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
     size <- fromInteger <$> genFromSpecT szSpec'
     let additions = Set.fromList $ take (size - Set.size must) choices
     pure (Set.union must additions)
-  genFromTypeSpec (SetSpec must elemS szSpec) = do
-    let szSpec' = szSpec <> geqSpec (sizeOf must) <> maxSpec (cardinality elemS)
+  genFromTypeSpec (SetSpec must (simplifySpec -> elemS) szSpec) = do
+    let szSpec' = szSpec <> geqSpec (sizeOf must) <> maxSpec cardinalityElem
     chosenSize <-
       explain "Choose a size for the Set to be generated" $
         genFromSpecT szSpec'
@@ -176,7 +176,9 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
           GT -> go 100 targetSize must
           EQ -> go 100 targetSize must
     where
-      theMostWeCanExpect = maxFromSpec 0 (cardinality (simplifySpec elemS))
+      cardinalityElem = cardinality elemS
+      theMostWeCanExpect = maxFromSpec 0 cardinalityElem
+      genElem = genFromSpecT elemS
       go _ n s | n <= 0 = pure s
       go tries n s = do
         e <-
@@ -190,7 +192,7 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
                 ]
             )
             $ withMode Strict
-            $ suchThatWithTryT tries (genFromSpecT elemS) (`Set.notMember` s)
+            $ suchThatWithTryT tries genElem (`Set.notMember` s)
 
         go tries (n - 1) (Set.insert e s)
 
