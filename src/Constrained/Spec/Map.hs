@@ -187,7 +187,8 @@ instance
         let go fc sz 0 slow kvs' m
               | fromInteger sz == Map.size m = pure m
               | not slow =
-                  go fc
+                  go
+                    fc
                     sz
                     (sz - fromIntegral (Map.size m))
                     True
@@ -198,13 +199,14 @@ instance
               mkv <- inspect $ genFromSpecT kvs'
               case mkv of
                 Result (k, v) ->
-                  go fc
+                  go
+                    fc
                     sz
                     (n' - 1)
                     slow
                     (kvs' <> if slow then typeSpec (Cartesian (notEqualSpec k) mempty) else mempty)
                     (Map.insert k v m)
-                GenError{} | fc > 0 -> go (fc - 1) sz n' slow kvs' m
+                GenError {} | fc > 0 -> go (fc - 1) sz n' slow kvs' m
                 GenError msgs ->
                   if sizeOf m `conformsToSpec` size
                     then pure m
