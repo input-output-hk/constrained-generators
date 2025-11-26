@@ -41,6 +41,7 @@ module Constrained.API.Extend (
   combineNumSpec,
   genFromNumSpec,
   shrinkWithNumSpec,
+  fixupWithNumSpec,
   conformsToNumSpec,
   toPredsNumSpec,
   MaybeBounded (..),

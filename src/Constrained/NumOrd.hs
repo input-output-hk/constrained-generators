@@ -39,6 +39,7 @@ module Constrained.NumOrd (
   combineNumSpec,
   genFromNumSpec,
   shrinkWithNumSpec,
+  fixupWithNumSpec,
   fixupWithTypeSpec,
   conformsToNumSpec,
   toPredsNumSpec,
