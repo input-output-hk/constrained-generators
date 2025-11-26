@@ -138,6 +138,8 @@ test-suite constrained-tests
     -Wredundant-constraints
     -Wunused-packages
     -rtsopts
+    -threaded
+    -with-rtsopts=-N
 
   build-depends:
     QuickCheck >= 2.15.0.1,
