@@ -47,6 +47,7 @@ module Constrained.NumOrd (
   MaybeBounded (..),
   NumLike (..),
   HasDivision (..),
+  IsNumLike,
   Numeric,
   Number,
   nubOrd,
@@ -654,8 +655,10 @@ cardinalNumSpec (NumSpecInterval Nothing Nothing) = cardinalTrueSpec @n
 -- ====================================================================
 -- Now the operations on Numbers
 
+type IsNumLike a = (HasDivision a, OrdLike a, NumLike a)
+
 -- | Everything we need to make the number operations make sense on a given type
-class (Num a, HasSpec a, HasDivision a, OrdLike a) => NumLike a where
+class (Num a, HasSpec a) => NumLike a where
   subtractSpec :: a -> TypeSpec a -> Specification a
   default subtractSpec ::
     ( NumLike (SimpleRep a)
@@ -677,7 +680,9 @@ class (Num a, HasSpec a, HasDivision a, OrdLike a) => NumLike a where
 
   safeSubtract :: a -> a -> Maybe a
   default safeSubtract ::
-    (HasSimpleRep a, NumLike (SimpleRep a)) =>
+    ( NumLike (SimpleRep a)
+    , GenericRequires a
+    ) =>
     a ->
     a ->
     Maybe a
@@ -693,10 +698,10 @@ class (Num a, HasSpec a, HasDivision a, OrdLike a) => NumLike a where
 -- by using `chooseSpec` or by using the can't set (which would blow up to be 2000 elements large in this
 -- case). In short, there is no _satisfactory_ solution here.
 data IntW (as :: [Type]) b where
-  AddW :: NumLike a => IntW '[a, a] a
-  MultW :: NumLike a => IntW '[a, a] a
-  NegateW :: NumLike a => IntW '[a] a
-  SignumW :: NumLike a => IntW '[a] a
+  AddW :: IsNumLike a => IntW '[a, a] a
+  MultW :: IsNumLike a => IntW '[a, a] a
+  NegateW :: IsNumLike a => IntW '[a] a
+  SignumW :: IsNumLike a => IntW '[a] a
 
 deriving instance Eq (IntW dom rng)
 
@@ -890,7 +895,7 @@ instance {-# OVERLAPPABLE #-} Numeric a => NumLike a where
         Nothing
     | otherwise = Just $ x - a
 
-instance NumLike a => Num (Term a) where
+instance IsNumLike a => Num (Term a) where
   (+) = (+.)
   negate = negate_
   fromInteger = Lit . fromInteger
@@ -952,21 +957,21 @@ instance Logic IntW where
 infix 4 +.
 
 -- | `Term`-level `(+)`
-(+.) :: NumLike a => Term a -> Term a -> Term a
+(+.) :: IsNumLike a => Term a -> Term a -> Term a
 (+.) = appTerm AddW
 
 infixl 7 *.
 
 -- | `Term`-level `(+)`
-(*.) :: NumLike a => Term a -> Term a -> Term a
+(*.) :: IsNumLike a => Term a -> Term a -> Term a
 (*.) = appTerm MultW
 
 -- | `Term`-level `negate`
-negate_ :: NumLike a => Term a -> Term a
+negate_ :: IsNumLike a => Term a -> Term a
 negate_ = appTerm NegateW
 
 -- | `Term`-level `signum`
-signum_ :: NumLike a => Term a -> Term a
+signum_ :: IsNumLike a => Term a -> Term a
 signum_ = appTerm SignumW
 
 infix 4 -.

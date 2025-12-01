@@ -3,6 +3,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Constrained.Examples.Basic where
 
@@ -367,3 +368,17 @@ pairCant = constrained' $ \ [var| i |] [var| p |] ->
 
 signumPositive :: Specification Rational
 signumPositive = constrained $ \x -> signum (x * 30) >=. 1
+
+newtype Number = Number Int deriving (Ord, Eq, Show, Generic, Num)
+
+instance HasSimpleRep Number
+instance HasSpec Number
+instance NumLike Number
+
+evenSpec :: Specification Number
+evenSpec = explainSpec ["even via (x+x)"] $
+  constrained $ \ [var|evenx|] ->
+    exists
+      (\eval -> pure (div (eval evenx) 2))
+      (\ [var|somey|] -> [assert $ evenx ==. somey + somey])
+

@@ -509,7 +509,7 @@ conformsToFoldSpec xs (FoldSpec (Fun f) s) = adds (map (semantics f) xs) `confor
 
 -- | Talk about how to add together values and generate lists of values that
 -- conform to `FoldSpec`s
-class (HasSpec a, NumLike a) => Foldy a where
+class (HasSpec a, IsNumLike a) => Foldy a where
   genList ::
     MonadGenError m => Specification a -> Specification a -> GenT m [a]
   default genList ::
