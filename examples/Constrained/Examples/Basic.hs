@@ -367,3 +367,7 @@ pairCant = constrained' $ \ [var| i |] [var| p |] ->
 
 signumPositive :: Specification Rational
 signumPositive = constrained $ \x -> signum (x * 30) >=. 1
+
+twiceChooseSpec :: Specification Bool
+twiceChooseSpec =  chooseSpec (1, notEqualSpec True) (3, notEqualSpec False)
+                <> chooseSpec (1, notEqualSpec True) (3, notEqualSpec False)
