@@ -744,11 +744,9 @@ class HasDivision a where
     Specification a
   divideSpec a ts = fromSimpleRepSpec $ divideSpec (toSimpleRep a) ts
 
-instance {-# OVERLAPPABLE #-} (HasSpec a, MaybeBounded a, Integral a, TypeSpec a ~ NumSpec a) => HasDivision a where
-  doDivide = div
-
-  divideSpec 0 _ = TrueSpec
-  divideSpec a (NumSpecInterval (unionWithMaybe max lowerBound -> ml) (unionWithMaybe min upperBound -> mu)) = typeSpec ts
+divideSpecIntegral :: (HasSpec a, MaybeBounded a, Integral a, TypeSpec a ~ NumSpec a) => a -> TypeSpec a -> Specification a
+divideSpecIntegral 0 _ = TrueSpec
+divideSpecIntegral a (NumSpecInterval (unionWithMaybe max lowerBound -> ml) (unionWithMaybe min upperBound -> mu)) = typeSpec ts
     where
       ts
         | a > 0 = NumSpecInterval ml' mu'
@@ -775,6 +773,50 @@ instance {-# OVERLAPPABLE #-} (HasSpec a, MaybeBounded a, Integral a, TypeSpec a
              in if toInteger r * toInteger a > toInteger u
                   then r - signum a
                   else r
+
+instance HasDivision Integer where
+  doDivide = div
+  divideSpec = divideSpecIntegral
+
+instance HasDivision Natural where
+  doDivide = div
+  divideSpec = divideSpecIntegral
+
+instance HasDivision Int where
+  doDivide = div
+  divideSpec = divideSpecIntegral
+
+instance HasDivision Int8 where
+  doDivide = div
+  divideSpec = divideSpecIntegral
+
+instance HasDivision Int16 where
+  doDivide = div
+  divideSpec = divideSpecIntegral
+
+instance HasDivision Int32 where
+  doDivide = div
+  divideSpec = divideSpecIntegral
+
+instance HasDivision Int64 where
+  doDivide = div
+  divideSpec = divideSpecIntegral
+
+instance HasDivision Word8 where
+  doDivide = div
+  divideSpec = divideSpecIntegral
+
+instance HasDivision Word16 where
+  doDivide = div
+  divideSpec = divideSpecIntegral
+
+instance HasDivision Word32 where
+  doDivide = div
+  divideSpec = divideSpecIntegral
+
+instance HasDivision Word64 where
+  doDivide = div
+  divideSpec = divideSpecIntegral
 
 instance HasDivision (Ratio Integer) where
   doDivide = (/)
