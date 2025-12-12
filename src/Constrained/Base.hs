@@ -637,7 +637,7 @@ instance HasSpec Bool where
   toPreds _ _ = TruePred
   typeSpecOpt _ [] = TrueSpec
   typeSpecOpt _ (nub -> [b]) = equalSpec (not b)
-  typeSpecOpt _ _ = ErrorSpec $ pure "bad"
+  typeSpecOpt _ _ = ErrorSpec $ pure "inconsistent bool spec"
 
 instance HasSpec () where
   type TypeSpec () = ()
