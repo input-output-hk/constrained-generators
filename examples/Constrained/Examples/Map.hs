@@ -154,8 +154,8 @@ keysExample = constrained $ \k ->
     bs = lit [11 .. 20]
 
 failingKVSpec :: Specification (Map Int Int)
-failingKVSpec = constrained $ \ m ->
+failingKVSpec = constrained $ \m ->
   [ assert $ 10 <. sizeOf_ m
-  , forAll' m $ \ k _v ->
+  , forAll' m $ \k _v ->
       k `satisfies` chooseSpec (1, constrained $ \k' -> 2 * k' ==. 1) (3, mempty)
   ]
