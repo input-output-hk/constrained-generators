@@ -582,7 +582,20 @@ simplifyPred = \case
   DependsOn Lit {} _ -> TruePred
   DependsOn x y -> DependsOn x y
   -- Here is where we need the SumSpec instance
-  Case t bs -> mkCase (simplifyTerm t) (mapList (mapWeighted simplifyBinder) bs)
+  Case t bs
+    | Just es <- buildElemList bs -> ElemPred True (simplifyTerm t) es
+    | otherwise -> mkCase (simplifyTerm t) (mapList (mapWeighted simplifyBinder) bs)
+      where
+        buildElemList :: List (Weighted Binder) as -> Maybe (NE.NonEmpty (SumOver as))
+        buildElemList Nil = Nothing
+        buildElemList (Weighted Nothing (x :-> ElemPred True (V x') as) :> xs)
+          | Just Refl <- eqVar x x' =
+              case xs of
+                Nil -> Just as
+                _ :> _ -> do
+                  rest <- buildElemList xs
+                  return $ fmap SumLeft as <> fmap SumRight rest
+        buildElemList _ = Nothing
   When b p -> whenTrue (simplifyTerm b) (simplifyPred p)
   TruePred -> TruePred
   FalsePred es -> FalsePred es

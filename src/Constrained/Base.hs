@@ -109,6 +109,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Orphans ()
 import Data.Semigroup (Max (..), getMax)
 import Data.Typeable
+import Data.List (nub)
 import GHC.Stack
 import Prettyprinter hiding (cat)
 import Test.QuickCheck (arbitrary, shrink)
@@ -634,6 +635,9 @@ instance HasSpec Bool where
   fixupWithTypeSpec _ = Just
   conformsTo _ _ = True
   toPreds _ _ = TruePred
+  typeSpecOpt _ [] = TrueSpec
+  typeSpecOpt _ (nub -> [b]) = equalSpec (not b)
+  typeSpecOpt _ _ = ErrorSpec $ pure "inconsistent bool spec"
 
 instance HasSpec () where
   type TypeSpec () = ()
@@ -789,7 +793,6 @@ bind bodyf = newv :-> bodyPred
     boundBinder :: Binder a -> Int
     boundBinder (x :-> p) = max (nameOf x) (bound p)
 
-    bound (ElemPred _ _ _) = -1
     bound (Explain _ p) = bound p
     bound (Subst x _ p) = max (nameOf x) (bound p)
     bound (And ps) = maximum $ (-1) : map bound ps -- (-1) as the default to get 0 as `nextVar p`
@@ -805,6 +808,7 @@ bind bodyf = newv :-> bodyPred
     bound TruePred = -1
     bound FalsePred {} = -1
     bound Monitor {} = -1
+    bound ElemPred {} = -1
 
 -- ==================================================
 -- Pred
@@ -883,7 +887,7 @@ equalSpec = MemberSpec . pure
 
 -- | Anything but this
 notEqualSpec :: forall a. HasSpec a => a -> Specification a
-notEqualSpec = TypeSpec (emptySpec @a) . pure
+notEqualSpec = typeSpecOpt (emptySpec @a) . pure
 
 -- | Anything but these
 notMemberSpec :: forall a f. (HasSpec a, Foldable f) => f a -> Specification a
