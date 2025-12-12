@@ -27,7 +27,7 @@ oddSpec = explainSpec ["odd via (y+y+1)"] $
 
 evenSpec ::
   forall n.
-  (IsNumLike n, Integral n) =>
+  (NumLike n, Integral n) =>
   Specification n
 evenSpec = explainSpec ["even via (x+x)"] $
   constrained $ \ [var|evenx|] ->

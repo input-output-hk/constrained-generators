@@ -18,7 +18,6 @@ module Constrained.API (
   Sized (..),
   NumLike (..),
   HasDivision (..),
-  IsNumLike,
   GenericallyInstantiated,
   IsPred,
   Logic,
