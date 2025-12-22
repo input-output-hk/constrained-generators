@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -367,3 +368,13 @@ pairCant = constrained' $ \ [var| i |] [var| p |] ->
 
 signumPositive :: Specification Rational
 signumPositive = constrained $ \x -> signum (x * 30) >=. 1
+
+twiceChooseSpec :: Specification Bool
+twiceChooseSpec =
+  chooseSpec (1, notEqualSpec True) (3, notEqualSpec False)
+    <> chooseSpec (1, notEqualSpec True) (3, notEqualSpec False)
+
+twiceChooseSpecInt :: Specification Int
+twiceChooseSpecInt =
+  chooseSpec (1, leqSpec 1) (3, gtSpec 1)
+    <> chooseSpec (1, leqSpec 1) (3, gtSpec 1)

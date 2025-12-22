@@ -585,17 +585,17 @@ simplifyPred = \case
   Case t bs
     | Just es <- buildElemList bs -> ElemPred True (simplifyTerm t) es
     | otherwise -> mkCase (simplifyTerm t) (mapList (mapWeighted simplifyBinder) bs)
-      where
-        buildElemList :: List (Weighted Binder) as -> Maybe (NE.NonEmpty (SumOver as))
-        buildElemList Nil = Nothing
-        buildElemList (Weighted Nothing (x :-> ElemPred True (V x') as) :> xs)
-          | Just Refl <- eqVar x x' =
-              case xs of
-                Nil -> Just as
-                _ :> _ -> do
-                  rest <- buildElemList xs
-                  return $ fmap SumLeft as <> fmap SumRight rest
-        buildElemList _ = Nothing
+    where
+      buildElemList :: List (Weighted Binder) as -> Maybe (NE.NonEmpty (SumOver as))
+      buildElemList Nil = Nothing
+      buildElemList (Weighted Nothing (x :-> ElemPred True (V x') as) :> xs)
+        | Just Refl <- eqVar x x' =
+            case xs of
+              Nil -> Just as
+              _ :> _ -> do
+                rest <- buildElemList xs
+                return $ fmap SumLeft as <> fmap SumRight rest
+      buildElemList _ = Nothing
   When b p -> whenTrue (simplifyTerm b) (simplifyPred p)
   TruePred -> TruePred
   FalsePred es -> FalsePred es
@@ -983,7 +983,6 @@ backPropagation relevant (SolverPlan initplan) = SolverPlan (go [] (reverse init
         newStage (Assert (Equal tl tr))
           | [Name xl] <- Set.toList $ freeVarSet tl
           , [Name xr] <- Set.toList $ freeVarSet tr
-          , Name x `elem` [Name xl, Name xr]
           , Result ctxL <- toCtx xl tl
           , Result ctxR <- toCtx xr tr =
               case (eqVar x xl, eqVar x xr) of
@@ -1001,7 +1000,25 @@ backPropagation relevant (SolverPlan initplan) = SolverPlan (go [] (reverse init
                       (propagateSpec (forwardPropagateSpec spec ctxR) ctxL)
                       (Set.insert (Name x) relevant)
                   ]
-                _ -> error "The impossible happened"
+                _ -> []
+        newStage (Case e bs)
+          | [Name xe] <- Set.toList $ freeVarSet e
+          , Nothing <- eqVar x xe =
+              [ SolverStage
+                  xe
+                  [Case e $ mapList mkBranch bs]
+                  TrueSpec
+                  (Set.insert (Name x) relevant) -- TODO: this is only true in the
+                  -- case where we actually rule some
+                  -- stuff out
+              ]
+          where
+            mkBranch :: Weighted Binder x -> Weighted Binder x
+            mkBranch (Weighted _ (xb :-> p))
+              | Result spec' <- computeSpec x p
+              , isErrorLike (spec <> spec') =
+                  Weighted Nothing $ xb :-> toPred False
+              | otherwise = Weighted Nothing (xb :-> TruePred)
         newStage _ = []
 
 -- | Function symbols for `(==.)`
