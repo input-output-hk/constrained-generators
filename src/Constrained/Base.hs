@@ -105,11 +105,11 @@ import Data.Foldable (
   toList,
  )
 import Data.Kind (Constraint, Type)
+import Data.List (nub)
 import qualified Data.List.NonEmpty as NE
 import Data.Orphans ()
 import Data.Semigroup (Max (..), getMax)
 import Data.Typeable
-import Data.List (nub)
 import GHC.Stack
 import Prettyprinter hiding (cat)
 import Test.QuickCheck (arbitrary, shrink)
