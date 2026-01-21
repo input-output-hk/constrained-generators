@@ -73,9 +73,9 @@ jobs:
         continue-on-error: ${{ matrix.ghc-version == 'latest' }}
       # - if: steps.build.outcome == 'failure'
       #   run: echo "::warning: Build failed on ${{matrix.ghc-version}}"
-      - if: steps.build.outcome == 'sucess'
+      - if: steps.build.outcome == 'success'
         run: cabal test all
-      - if: steps.build.outcome == 'sucess'
+      - if: steps.build.outcome == 'success'
         run: cabal haddock all
       - uses: actions/cache/save@v4
         with:
