@@ -71,7 +71,7 @@ jobs:
       - run: cabal build all
         id: build
         continue-on-error: ${{ matrix.ghc-version == 'latest' }}
-      - if: stesp.build.outcome == 'failure'
+      - if: steps.build.outcome == 'failure'
         run: echo "::warning: Build failed on ${{matrix.ghc-version}}"
       - if: steps.build.outcome == 'sucess'
         run: cabal test all
