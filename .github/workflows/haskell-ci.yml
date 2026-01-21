@@ -69,11 +69,14 @@ jobs:
       - if: ${{matrix.ghc-version}} == latest
         run: cabal configure --allow-newer=base
       - run: cabal build all
+        id: build
         continue-on-error: ${{ matrix.ghc-version == 'latest' }}
-      - run: cabal test all
-        continue-on-error: ${{ matrix.ghc-version == 'latest' }}
-      - run: cabal haddock all
-        continue-on-error: ${{ matrix.ghc-version == 'latest' }}
+      - if: stesp.build.outcome == 'failure'
+        run: echo "::warning: Build failed on ${{matrix.ghc-version}}"
+      - if: steps.build.outcome == 'sucess'
+        run: cabal test all
+      - if: steps.build.outcome == 'sucess'
+        run: cabal haddock all
       - uses: actions/cache/save@v4
         with:
           key: ${{ matrix.os }}-${{ matrix.ghc-version }}-${{ github.sha }}
