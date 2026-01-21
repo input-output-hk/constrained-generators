@@ -64,9 +64,19 @@ jobs:
           key: ${{ matrix.os }}-${{ matrix.ghc-version }}-${{ github.sha }}
           path: ~/.cabal/store
           restore-keys: ${{ matrix.os }}-${{ matrix.ghc-version }}-
+      # we do this to try to catch issues early but we don't want to be
+      # artifically constrained by libraries that keep an upper bound on `base`
+      - if: ${{matrix.ghc-version}} == latest
+        run: cabal configure --allow-newer=base
       - run: cabal build all
-      - run: cabal test all
-      - run: cabal haddock all
+        id: build
+        continue-on-error: ${{ matrix.ghc-version == 'latest' }}
+      - if: steps.build.outcome == 'failure'
+        run: echo "::warning ::Build failed on ${{matrix.ghc-version}}"
+      - if: steps.build.outcome == 'success'
+        run: cabal test all
+      - if: steps.build.outcome == 'success'
+        run: cabal haddock all
       - uses: actions/cache/save@v4
         with:
           key: ${{ matrix.os }}-${{ matrix.ghc-version }}-${{ github.sha }}
